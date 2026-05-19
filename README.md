@@ -1,3 +1,6 @@
+<img width="542" height="537" alt="Screenshot 2026-05-19 at 4 13 33 PM" src="https://github.com/user-attachments/assets/ad17017c-ee73-4c0c-be75-40508e7cbca7" />
+
+
 # Frame Notes
 
 Frame Notes is designed as a workflow tool for photographers working across planning, shooting, editing, and darkroom experimentation.
