@@ -38,3 +38,10 @@ http://127.0.0.1:8000/
 - [ ] Film rolls and frame notes
 - [ ] Selects and dashboard
 - [ ] Deploy to production
+
+---
+
+## Data Model
+<img width="657" height="315" alt="Screenshot 2026-05-19 at 4 05 41 PM" src="https://github.com/user-attachments/assets/61b8552b-3322-42de-a17c-5add4b0eae64" />
+
+
