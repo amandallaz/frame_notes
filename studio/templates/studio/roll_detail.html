@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ roll }} — Frame Notes</title>
+</head>
+<body>
+  <p><a href="{% url 'project_detail' project.pk %}">← {{ project.title }}</a></p>
+
+  <h1>{{ roll }}</h1>
+  {% if roll.stock %}<p>{{ roll.stock }}{% if roll.get_status_display %} · {{ roll.get_status_display }}{% endif %}</p>{% endif %}
+
+  <h2>Frame notes</h2>
+
+  {% if frames %}
+    <ul>
+      {% for frame in frames %}
+        <li>
+          <strong>Frame {{ frame.frame_number }}</strong>
+          {% if frame.note %} — {{ frame.note }}{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No frame notes yet. Log frames in admin for now.</p>
+  {% endif %}
+
+  <p><a href="{% url 'project_list' %}">All projects</a></p>
+</body>
+</html>

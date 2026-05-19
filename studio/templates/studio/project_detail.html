@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ project.title }} — Frame Notes</title>
+</head>
+<body>
+  <h1>{{ project.title }}</h1>
+  {% if project.description %}
+    <p>{{ project.description }}</p>
+  {% endif %}
+  <h2>Rolls</h2>
+  {% if rolls %}
+    <ul>
+      {% for roll in rolls %}
+        <li>
+          <strong><a href="{% url 'roll_detail' project.pk roll.pk %}">{{ roll }}</a></strong>
+          {% if roll.stock %} — {{ roll.stock }}{% endif %}
+          {% if roll.status %} ({{ roll.get_status_display }}){% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No rolls yet.</p>
+  {% endif %}
+  <p><a href="{% url 'project_list' %}">← All projects</a></p>
+</body>
+</html>
