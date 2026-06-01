@@ -1,28 +1,59 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Projects — Frame Notes</title>
-</head>
-<body>
-  <h1>Projects</h1>
+{% extends "studio/base.html" %}
+{% block title %}Projects — Frame Notes{% endblock %}
+{% block content %}
+  <div class="page-header page-header--split">
+    <h1>Projects</h1>
+    {% if projects %}
+      <details class="create-panel"{% if show_create_form %} open{% endif %}>
+        <summary class="create-panel__trigger">+ New project</summary>
+        <div class="create-panel__body">
+          <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit">Save project</button>
+          </form>
+        </div>
+      </details>
+    {% endif %}
+  </div>
 
-  {% if projects %}
-    <ul>
-      {% for project in projects %}
-        <li>
-          <strong><a href="{% url 'project_detail' project.pk %}">{{ project.title }}</a></strong>
-          {% if project.description %}
-            <p>{{ project.description }}</p>
-          {% endif %}
-        </li>
+  {% if messages %}
+    <ul class="messages">
+      {% for message in messages %}
+        <li class="{{ message.tags }}">{{ message }}</li>
       {% endfor %}
     </ul>
-  {% else %}
-    <p>No active projects yet.</p>
   {% endif %}
 
-  <p><a href="/">← Home</a></p>
-</body>
-</html>
+  {% if not projects %}
+    <details class="create-panel" open>
+      <summary class="create-panel__trigger">+ New project</summary>
+      <div class="create-panel__body">
+        <p class="lead">Start your first project — a trip, a theme, or a body of work.</p>
+        <form method="post">
+          {% csrf_token %}
+          {{ form.as_p }}
+          <button type="submit">Save project</button>
+        </form>
+      </div>
+    </details>
+  {% endif %}
+
+  {% if projects %}
+    <section class="section">
+      <ul class="card-list">
+        {% for project in projects %}
+          <li>
+            <a href="{% url 'project_detail' project.pk %}">{{ project.title }}</a>
+            {% if project.description %}
+              <p>{{ project.description }}</p>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+{% endblock %}
+{% block back_link %}
+  <a class="site-back" href="{% url 'home' %}">Home</a>
+{% endblock %}

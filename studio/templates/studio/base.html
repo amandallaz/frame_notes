@@ -1,0 +1,23 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Frame Notes{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'studio/css/site.css' %}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="site-brand" href="{% url 'home' %}">Frame Notes</a>
+      {% block back_link %}{% endblock %}
+    </div>
+  </header>
+  <main class="{% block main_class %}{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,31 +1,422 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ roll }} — Frame Notes</title>
-</head>
-<body>
-  <p><a href="{% url 'project_detail' project.pk %}">← {{ project.title }}</a></p>
+{% extends "studio/base.html" %}
+{% block title %}{{ roll }} — Frame Notes{% endblock %}
+{% block main_class %}main--wide{% endblock %}
+{% block content %}
+  <div class="page-header">
+    <h1>{{ roll }}</h1>
+    {% if roll.stock or roll.get_status_display %}
+      <p class="lead">
+        {% if roll.stock %}{{ roll.stock }}{% endif %}
+        {% if roll.get_status_display %} · {{ roll.get_status_display }}{% endif %}
+      </p>
+    {% endif %}
+  </div>
 
-  <h1>{{ roll }}</h1>
-  {% if roll.stock %}<p>{{ roll.stock }}{% if roll.get_status_display %} · {{ roll.get_status_display }}{% endif %}</p>{% endif %}
-
-  <h2>Frame notes</h2>
-
-  {% if frames %}
-    <ul>
-      {% for frame in frames %}
-        <li>
-          <strong>Frame {{ frame.frame_number }}</strong>
-          {% if frame.note %} — {{ frame.note }}{% endif %}
-        </li>
+  {% if messages %}
+    <ul class="messages">
+      {% for message in messages %}
+        <li class="{{ message.tags }}">{{ message }}</li>
       {% endfor %}
     </ul>
-  {% else %}
-    <p>No frame notes yet. Log frames in admin for now.</p>
   {% endif %}
 
-  <p><a href="{% url 'project_list' %}">All projects</a></p>
-</body>
-</html>
+  <section class="section section--frames">
+    {% if frames %}
+      <div class="filmstrip">
+      <p class="filmstrip__label">{% if roll.stock %}{{ roll.stock }}{% else %}Contact sheet{% endif %}</p>
+      <ul class="frame-grid">
+        {% for frame in frames %}
+          <li class="frame-grid__cell{% if frame.is_favorite %} is-favorite{% endif %}{% if editing and form.instance.frame_number == frame.frame_number %} is-active{% endif %}" data-frame-number="{{ frame.frame_number }}">
+            <div class="frame-grid__body">
+              <div class="frame-grid__edge frame-grid__edge--top" aria-hidden="true"></div>
+              <div class="frame-grid__image">
+              {% if frame.image.name %}
+                <button
+                  type="button"
+                  class="frame-grid__zoom"
+                  data-image-url="{{ frame.image.url }}?v={{ roll.updated_at|date:'U' }}"
+                  data-frame-label="{{ frame.display_number }}"
+                  data-frame-number="{{ frame.frame_number }}"
+                  data-scan="{% if frame.scan_filename %}{{ frame.scan_filename }}{% endif %}"
+                  aria-label="View frame {{ frame.display_number }}"
+                >
+                  <img
+                    class="frame-grid__img"
+                    src="{{ frame.image.url }}?v={{ roll.updated_at|date:'U' }}"
+                    alt="Frame {{ frame.display_number }}"
+                  >
+                </button>
+              {% else %}
+                <span class="frame-grid__placeholder">No scan</span>
+              {% endif %}
+              <button
+                type="button"
+                class="btn-favorite frame-grid__favorite"
+                data-frame-label="{{ frame.display_number }}"
+                aria-label="Favorite frame {{ frame.display_number }}"
+              >☆</button>
+              </div>
+              <div class="frame-grid__edge frame-grid__edge--bottom">
+                <a href="?frame={{ frame.frame_number }}" class="frame-grid__caption">{{ frame.display_number }}</a>
+              </div>
+            </div>
+            {% if frame.note %}
+              <template class="frame-grid__note-data">{{ frame.note }}</template>
+              <p class="frame-grid__note">{{ frame.note|truncatechars:32 }}</p>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+      </div>
+    {% else %}
+      <p class="lead">No frame notes yet.</p>
+    {% endif %}
+  </section>
+
+  <dialog class="frame-lightbox" id="frame-lightbox">
+    <button type="button" class="frame-lightbox__close" aria-label="Close">×</button>
+    <div class="frame-lightbox__stage">
+      <button type="button" class="frame-lightbox__nav frame-lightbox__nav--prev" id="frame-lightbox-prev" aria-label="Previous frame">‹</button>
+      <img class="frame-lightbox__img" id="frame-lightbox-img" src="" alt="">
+      <button type="button" class="frame-lightbox__nav frame-lightbox__nav--next" id="frame-lightbox-next" aria-label="Next frame">›</button>
+    </div>
+    <div class="frame-lightbox__caption">
+      <div class="frame-lightbox__heading">
+        <p class="frame-lightbox__title" id="frame-lightbox-title"></p>
+        <button
+          type="button"
+          class="btn-favorite frame-lightbox__favorite"
+          id="frame-lightbox-favorite"
+          aria-label="Favorite this frame"
+        >☆</button>
+      </div>
+      <p class="frame-lightbox__counter meta" id="frame-lightbox-counter"></p>
+      <p class="frame-lightbox__note" id="frame-lightbox-note" hidden></p>
+      <p class="frame-lightbox__scan" id="frame-lightbox-scan" hidden></p>
+      <a class="frame-lightbox__edit" id="frame-lightbox-edit" href="#">Edit frame</a>
+    </div>
+  </dialog>
+
+  <div class="roll-tools">
+    <details class="create-panel roll-panel"{% if show_log_frame %} open{% endif %}>
+      <summary class="create-panel__trigger">
+        {% if editing %}Edit frame {{ form.instance.display_number }}{% else %}Log a frame{% endif %}
+      </summary>
+      <div class="create-panel__body">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="save_frame">
+          {{ form.as_p }}
+          <button type="submit">{% if editing %}Update frame{% else %}Save frame{% endif %}</button>
+        </form>
+        {% if editing %}
+          <p><a href="{% url 'roll_detail' project.pk roll.pk %}">+ Log a new frame</a></p>
+          {% if form.instance.scan_filename %}
+            <p class="meta">Lab scan file: <code>{{ form.instance.scan_filename }}</code></p>
+          {% endif %}
+          <form
+            method="post"
+            onsubmit="return confirm('Delete frame {{ form.instance.display_number }}? Note and scan will be removed.')"
+          >
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_frame">
+            <input type="hidden" name="frame_number" value="{{ form.instance.frame_number }}">
+            <button type="submit" class="btn--danger">Delete this frame</button>
+          </form>
+        {% endif %}
+      </div>
+    </details>
+
+    <details class="create-panel roll-panel"{% if show_import %} open{% endif %}>
+      <summary class="create-panel__trigger">Import folder</summary>
+      <div class="create-panel__body">
+        <p class="form-hint">
+          Choose your lab scan folder. Files sort by filename. Pick which file is
+          <strong>frame 1</strong>; earlier files import as <strong>00</strong>,
+          <strong>0</strong>, then 1, 2, 3…
+        </p>
+        <form method="post" enctype="multipart/form-data" id="import-form">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="import_folder">
+          <p>
+            <label for="lab-folder">Lab folder</label>
+            <input type="file" name="lab_folder" id="lab-folder" webkitdirectory multiple required>
+          </p>
+          <p class="form-row">
+            <label for="first-file-index">Frame 1 starts at file #</label>
+            <input
+              type="number"
+              name="first_file_index"
+              id="first-file-index"
+              class="input--narrow"
+              value="1"
+              min="1"
+              max="45"
+            >
+          </p>
+          <ul id="folder-preview" hidden></ul>
+          <p>
+            <label>
+              <input type="checkbox" name="reverse_order" id="reverse-order">
+              Reverse order (first file = highest frame number)
+            </label>
+          </p>
+          <button type="submit">Import scans</button>
+        </form>
+        {% if has_scans %}
+          <form
+            method="post"
+            style="margin-top: 1rem;"
+            onsubmit="return confirm('Remove all scans on this roll? Text notes are kept.')"
+          >
+            {% csrf_token %}
+            <input type="hidden" name="action" value="clear_images">
+            <button type="submit" class="btn--ghost">Clear images</button>
+          </form>
+        {% endif %}
+      </div>
+    </details>
+
+    <details class="create-panel roll-panel"{% if show_roll_edit %} open{% endif %}>
+      <summary class="create-panel__trigger">Roll details</summary>
+      <div class="create-panel__body">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="edit_roll">
+          {{ roll_form.as_p }}
+          <button type="submit">Update roll</button>
+        </form>
+      </div>
+    </details>
+  </div>
+
+  <section class="section section--danger section--align-end">
+    <form
+      method="post"
+      onsubmit="return confirm('Delete this roll? All frame notes and scans will be removed.')"
+    >
+      {% csrf_token %}
+      <input type="hidden" name="action" value="delete_roll">
+      <button type="submit" class="btn--danger">Delete roll</button>
+    </form>
+  </section>
+{% endblock %}
+{% block back_link %}
+  <a class="site-back" href="{% url 'project_detail' project.pk %}">{{ project.title }}</a>
+{% endblock %}
+{% block extra_js %}
+  <script>
+    function naturalKey(name) {
+      return name.split(/(\d+)/).map((part, i) =>
+        i % 2 === 1 ? parseInt(part, 10) : part.toLowerCase()
+      );
+    }
+    function compareNatural(a, b) {
+      const ka = naturalKey(a);
+      const kb = naturalKey(b);
+      const len = Math.max(ka.length, kb.length);
+      for (let i = 0; i < len; i++) {
+        const pa = ka[i];
+        const pb = kb[i];
+        if (pa === undefined) return -1;
+        if (pb === undefined) return 1;
+        if (pa === pb) continue;
+        if (typeof pa === "number" && typeof pb === "number") return pa - pb;
+        return String(pa).localeCompare(String(pb));
+      }
+      return 0;
+    }
+    function leaderFrameNumber(leaderIndex, leaderCount) {
+      return leaderIndex - leaderCount + 1;
+    }
+    function frameLabel(fileIndex, firstFileIndex) {
+      if (fileIndex < firstFileIndex) {
+        const leaderCount = firstFileIndex - 1;
+        const frameNum = leaderFrameNumber(fileIndex - 1, leaderCount);
+        if (frameNum === -1) return "00";
+        if (frameNum === 0) return "0";
+        if (frameNum < -1) return "L" + Math.abs(frameNum + 1);
+        return String(frameNum);
+      }
+      return String(fileIndex - firstFileIndex + 1);
+    }
+    function updatePreview() {
+      const input = document.getElementById("lab-folder");
+      const list = document.getElementById("folder-preview");
+      const firstIndex = parseInt(document.getElementById("first-file-index").value, 10) || 1;
+      const reverse = document.getElementById("reverse-order").checked;
+      const imageRe = /\.(jpe?g|png|webp)$/i;
+      if (!input.files || input.files.length === 0) {
+        list.hidden = true;
+        list.innerHTML = "";
+        return;
+      }
+      let files = Array.from(input.files)
+        .filter((f) => imageRe.test(f.name))
+        .map((f) => f.name.split("/").pop());
+      files.sort(compareNatural);
+      if (reverse) files.reverse();
+      list.innerHTML = "";
+      files.forEach((name, i) => {
+        const fileNum = i + 1;
+        const label = frameLabel(fileNum, firstIndex);
+        const li = document.createElement("li");
+        li.textContent = `#${fileNum} → frame ${label} — ${name}`;
+        if (fileNum === firstIndex) li.classList.add("is-frame-1");
+        else if (fileNum < firstIndex) li.classList.add("is-leader");
+        list.appendChild(li);
+      });
+      list.hidden = files.length === 0;
+    }
+    document.getElementById("lab-folder").addEventListener("change", updatePreview);
+    document.getElementById("first-file-index").addEventListener("input", updatePreview);
+    document.getElementById("reverse-order").addEventListener("change", updatePreview);
+
+    const lightbox = document.getElementById("frame-lightbox");
+    const lbImg = document.getElementById("frame-lightbox-img");
+    const lbTitle = document.getElementById("frame-lightbox-title");
+    const lbNote = document.getElementById("frame-lightbox-note");
+    const lbScan = document.getElementById("frame-lightbox-scan");
+    const lbEdit = document.getElementById("frame-lightbox-edit");
+    const lbClose = lightbox.querySelector(".frame-lightbox__close");
+    const lbPrev = document.getElementById("frame-lightbox-prev");
+    const lbNext = document.getElementById("frame-lightbox-next");
+    const lbCounter = document.getElementById("frame-lightbox-counter");
+    const lbFavorite = document.getElementById("frame-lightbox-favorite");
+    const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value;
+    const zoomButtons = Array.from(document.querySelectorAll(".frame-grid__zoom"));
+    let lightboxIndex = 0;
+
+    function gridCellForFrameNumber(frameNumber) {
+      return document.querySelector(
+        `.frame-grid__cell[data-frame-number="${frameNumber}"]`
+      );
+    }
+
+    function setFavoriteUI(frameNumber, frameLabel, isFavorite) {
+      const cell = gridCellForFrameNumber(frameNumber);
+      if (cell) {
+        cell.classList.toggle("is-favorite", isFavorite);
+      }
+      lbFavorite.classList.toggle("is-on", isFavorite);
+      lbFavorite.textContent = isFavorite ? "★" : "☆";
+      lbFavorite.setAttribute(
+        "aria-label",
+        (isFavorite ? "Unfavorite" : "Favorite") + " frame " + frameLabel
+      );
+    }
+
+    async function toggleFavorite(frameNumber, frameLabel) {
+      if (!csrfToken) return;
+      lbFavorite.disabled = true;
+      try {
+        const body = new FormData();
+        body.append("action", "toggle_favorite");
+        body.append("frame_number", frameNumber);
+        body.append("csrfmiddlewaretoken", csrfToken);
+        const response = await fetch(window.location.pathname, {
+          method: "POST",
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+          body,
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        setFavoriteUI(String(data.frame_number), frameLabel, data.is_favorite);
+      } finally {
+        lbFavorite.disabled = false;
+      }
+    }
+
+    function frameDataFromButton(btn) {
+      const cell = btn.closest(".frame-grid__cell");
+      const noteData = cell.querySelector(".frame-grid__note-data");
+      return {
+        imageUrl: btn.dataset.imageUrl,
+        frameLabel: btn.dataset.frameLabel,
+        frameNumber: btn.dataset.frameNumber,
+        note: noteData ? noteData.content.textContent.trim() : "",
+        scan: btn.dataset.scan || "",
+      };
+    }
+
+    function showLightboxAt(index) {
+      if (!zoomButtons.length) return;
+      lightboxIndex = Math.max(0, Math.min(index, zoomButtons.length - 1));
+      const data = frameDataFromButton(zoomButtons[lightboxIndex]);
+
+      lbImg.src = data.imageUrl;
+      lbImg.alt = "Frame " + data.frameLabel;
+      lbTitle.textContent = "Frame " + data.frameLabel;
+      lbEdit.href = "?frame=" + data.frameNumber;
+      lbCounter.textContent = (lightboxIndex + 1) + " of " + zoomButtons.length;
+
+      if (data.note) {
+        lbNote.textContent = data.note;
+        lbNote.hidden = false;
+      } else {
+        lbNote.textContent = "";
+        lbNote.hidden = true;
+      }
+
+      if (data.scan) {
+        lbScan.textContent = "Scan: " + data.scan;
+        lbScan.hidden = false;
+      } else {
+        lbScan.textContent = "";
+        lbScan.hidden = true;
+      }
+
+      lbPrev.disabled = lightboxIndex === 0;
+      lbNext.disabled = lightboxIndex === zoomButtons.length - 1;
+
+      const cell = zoomButtons[lightboxIndex].closest(".frame-grid__cell");
+      setFavoriteUI(
+        data.frameNumber,
+        data.frameLabel,
+        cell && cell.classList.contains("is-favorite")
+      );
+    }
+
+    function openLightbox(btn) {
+      const index = zoomButtons.indexOf(btn);
+      showLightboxAt(index >= 0 ? index : 0);
+      lightbox.showModal();
+    }
+
+    document.querySelectorAll(".frame-grid__zoom").forEach((btn) => {
+      btn.addEventListener("click", () => openLightbox(btn));
+    });
+
+    document.querySelectorAll(".frame-grid__favorite").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const cell = btn.closest(".frame-grid__cell");
+        toggleFavorite(cell.dataset.frameNumber, btn.dataset.frameLabel);
+      });
+    });
+
+    lbPrev.addEventListener("click", () => showLightboxAt(lightboxIndex - 1));
+    lbNext.addEventListener("click", () => showLightboxAt(lightboxIndex + 1));
+
+    lbFavorite.addEventListener("click", () => {
+      const data = frameDataFromButton(zoomButtons[lightboxIndex]);
+      toggleFavorite(data.frameNumber, data.frameLabel);
+    });
+
+    lightbox.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        showLightboxAt(lightboxIndex - 1);
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        showLightboxAt(lightboxIndex + 1);
+      }
+    });
+
+    lbClose.addEventListener("click", () => lightbox.close());
+    lightbox.addEventListener("click", (e) => {
+      if (e.target === lightbox) lightbox.close();
+    });
+  </script>
+{% endblock %}

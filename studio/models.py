@@ -1,7 +1,25 @@
+from pathlib import Path
 from django.db import models
 
-# A project is a named body of photographic work (a trip, a job, or an ongoing theme, 
-# that can hold rolls and frame notes over time.
+# function returns photo path string
+def frame_image_upload_to(instance, filename):
+    ext = Path(filename).suffix.lower() or ".jpg"
+    label = frame_display(instance.frame_number)
+    return f"frames/roll_{instance.roll_id}/frame_{label}{ext}"
+
+
+def frame_display(number: int) -> str:
+    """Film edge labels: 00 and 0 before frame 1."""
+    if number == -1:
+        return "00"
+    if number == 0:
+        return "0"
+    if number < -1:
+        return f"L{abs(number + 1)}"
+    return str(number)
+
+# A project groups rolls for a trip, theme, or body of work.
+# Rolls are the main record (one physical roll); projects are optional and many-to-many.
 
 class Project(models.Model):
     title = models.CharField(max_length=200)
@@ -26,10 +44,10 @@ class FilmRoll(models.Model):
         EXPOSED = "exposed", "Exposed"
         AT_LAB = "at_lab", "At lab"
         SCANNED = "scanned", "Scanned"
-    project = models.ForeignKey(
+    projects = models.ManyToManyField(
         Project,
-        on_delete=models.CASCADE,
         related_name="rolls",
+        blank=True,
     )
     label = models.CharField(max_length=100, blank=True)
     stock = models.CharField(max_length=100, blank=True)
@@ -52,12 +70,24 @@ class FilmRoll(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     class Meta:
         ordering = ["-created_at"]
+    def project_titles(self):
+        return list(self.projects.values_list("title", flat=True))
+
     def __str__(self):
         if self.label:
-            return self.label
+            if self.label.lower().startswith("roll "):
+                return self.label
+            return f"Roll {self.label}"
+        titles = self.project_titles()
         if self.stock:
-            return f"{self.stock} ({self.project.title})"
-        return f"Roll on {self.project.title}"
+            if titles:
+                return f"{self.stock} ({titles[0]})"
+            return self.stock
+        if titles:
+            if len(titles) == 1:
+                return f"Roll on {titles[0]}"
+            return f"Roll on {titles[0]} +{len(titles) - 1}"
+        return f"Roll #{self.pk}"
 
 class FrameNote(models.Model):
     roll = models.ForeignKey(
@@ -65,8 +95,19 @@ class FrameNote(models.Model):
         on_delete=models.CASCADE,
         related_name="frames",
     )
-    frame_number = models.PositiveSmallIntegerField()
-    note = models.TextField()  # required — even "test" or "f/8 1/250"
+    frame_number = models.SmallIntegerField()
+    note = models.TextField(blank=True, default="")
+    image = models.ImageField(
+        upload_to=frame_image_upload_to,
+        blank=True,
+        null=True,
+    )
+    scan_filename = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Original lab scan filename, if imported.",
+    )
+    is_favorite = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     class Meta:
         ordering = ["frame_number"]
@@ -76,5 +117,9 @@ class FrameNote(models.Model):
                 name="unique_frame_per_roll",
             )
         ]
+    @property
+    def display_number(self):
+        return frame_display(self.frame_number)
+
     def __str__(self):
-        return f"Frame {self.frame_number} — {self.roll}"
+        return f"Frame {self.display_number} on roll {self.roll_id}"

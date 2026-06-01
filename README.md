@@ -1,22 +1,52 @@
-<img width="542" height="537" alt="Screenshot 2026-05-19 at 4 13 33 PM" src="https://github.com/user-attachments/assets/ad17017c-ee73-4c0c-be75-40508e7cbca7" />
-
-
 # Frame Notes
 
-Frame Notes is designed as a workflow tool for photographers working across planning, shooting, editing, and darkroom experimentation.
+Frame Notes is a workflow tool for film photographers. It helps organize projects, track rolls, capture frame-level notes, and review scans from contact sheet to final print.
 
-**Status:** Early development — homepage and project scaffold in place.
+**Status:** Active development. Core roll tracking, frame notes, scan import, and contact sheet workflows are functional. Production deployment is not yet configured.
+
+![Contact sheet view](docs/contact-sheet.png)
+
+---
+
+## Features
+
+- **Film rolls** — track stock, format, status, ISO, and roll metadata
+- **Frame notes** — attach observations, exposure notes, and scan images to individual frames
+- **Contact sheets** — browse scans in a filmstrip-style grid with frame numbers, favorites, and lightbox viewing
+
+---
+
+## Current capabilities
+
+- Projects
+- Film rolls
+- Frame notes
+- Lab scan import
+- Contact sheet review
+- Favorites and selects
+
+---
+
+## Roadmap
+
+- User accounts
+- Darkroom print tracking
+- Advanced search and filtering
+- Mobile-friendly workflow
+- Production deployment
 
 ---
 
 ## Stack
-- Python 3
-- Django
+
+- Python 3.12+
+- Django 6
 - SQLite (development)
+- Pillow (image uploads)
 
 ---
 
-## Local Setup
+## Local setup
 
 ```bash
 git clone https://github.com/amandallaz/frame_notes.git
@@ -28,23 +58,6 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-Open:
+Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
 
-```text
-http://127.0.0.1:8000/
-```
-
----
-
-## v1 Roadmap
-- [ ] Projects CRUD
-- [ ] Film rolls and frame notes
-- [ ] Selects and dashboard
-- [ ] Deploy to production
-
----
-
-## Data Model
-<img width="657" height="315" alt="Screenshot 2026-05-19 at 4 05 41 PM" src="https://github.com/user-attachments/assets/61b8552b-3322-42de-a17c-5add4b0eae64" />
-
-
+Scans are stored in `media/` (gitignored). After cloning, import images from the **Import folder** panel on any roll.
