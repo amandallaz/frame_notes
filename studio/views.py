@@ -3,7 +3,8 @@ from django.contrib.auth import login
 from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
-from django.http import JsonResponse
+from django.db.models import Count, Prefetch, Q
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
@@ -17,11 +18,24 @@ class StudioLoginView(LoginView):
     redirect_authenticated_user = True
 
 
-def _roll_url(project_pk, roll_pk, frame_number=None, *, panel=False):
-    url = reverse(
-        "roll_detail",
-        kwargs={"project_pk": project_pk, "roll_pk": roll_pk},
-    )
+def _user_rolls(user):
+    return FilmRoll.objects.filter(owner=user).order_by("-updated_at")
+
+
+def _user_can_access_roll(user, roll):
+    if roll.owner_id == user.id:
+        return True
+    return roll.projects.filter(owner=user).exists()
+
+
+def _roll_url(project, roll_pk, frame_number=None, *, panel=False):
+    if project is not None:
+        url = reverse(
+            "roll_detail",
+            kwargs={"project_pk": project.pk, "roll_pk": roll_pk},
+        )
+    else:
+        url = reverse("roll_detail_direct", kwargs={"roll_pk": roll_pk})
     params = []
     if frame_number is not None:
         params.append(f"frame={frame_number}")
@@ -43,6 +57,11 @@ def _get_frame(roll, raw):
 
 def _user_projects(user):
     return Project.objects.filter(owner=user, is_archived=False)
+
+
+def _suggested_frame_number(roll):
+    nums = list(roll.frames.values_list("frame_number", flat=True))
+    return max(nums) + 1 if nums else 1
 
 def home(request):
     if request.user.is_authenticated:
@@ -84,13 +103,19 @@ def project_detail(request, pk):
 
         if action == "delete_project":
             title = project.title
-            roll_count = project.rolls.count()
+            rolls_on_project = list(project.rolls.all())
+            roll_count = len(rolls_on_project)
+            for roll in rolls_on_project:
+                if roll.owner_id is None:
+                    roll.owner = request.user
+                    roll.save(update_fields=["owner_id"])
             project.delete()
             if roll_count:
                 messages.success(
                     request,
                     f"Deleted project “{title}”. "
-                    f"{roll_count} roll{'s' if roll_count != 1 else ''} kept.",
+                    f"{roll_count} roll{'s' if roll_count != 1 else ''} kept — "
+                    f"see Rolls.",
                 )
             else:
                 messages.success(request, f"Deleted project “{title}”.")
@@ -107,9 +132,15 @@ def project_detail(request, pk):
         elif action == "create_roll":
             roll_form = FilmRollForm(request.POST)
             if roll_form.is_valid():
-                roll = roll_form.save()
+                roll = roll_form.save(commit=False)
+                roll.owner = request.user
+                roll.save()
                 roll.projects.add(project)
-                return redirect("project_detail", pk=pk)
+                url = reverse(
+                    "roll_detail",
+                    kwargs={"project_pk": pk, "roll_pk": roll.pk},
+                )
+                return redirect(f"{url}?log=1")
             show_add_roll = True
 
     else:
@@ -133,12 +164,56 @@ def project_detail(request, pk):
     )
 
 @login_required
+def roll_list(request):
+    user_projects = Project.objects.filter(owner=request.user)
+    frames_with_scans = FrameNote.objects.exclude(
+        Q(image="") | Q(image__isnull=True)
+    ).order_by("frame_number")
+    rolls = (
+        _user_rolls(request.user)
+        .annotate(frame_count=Count("frames"))
+        .prefetch_related(
+            Prefetch("projects", queryset=user_projects),
+            Prefetch(
+                "frames",
+                queryset=frames_with_scans,
+                to_attr="preview_frames",
+            ),
+        )
+    )
+    roll_rows = []
+    for roll in rolls:
+        project = next(iter(roll.projects.all()), None)
+        roll_rows.append(
+            {
+                "roll": roll,
+                "project": project,
+                "preview_frames": roll.preview_frames[:5],
+            }
+        )
+    return render(request, "studio/roll_list.html", {"roll_rows": roll_rows})
+
+
+@login_required
 def roll_detail(request, project_pk, roll_pk):
     project = get_object_or_404(Project, pk=project_pk, owner=request.user)
-    roll = get_object_or_404(
-        FilmRoll.objects.filter(projects=project),
-        pk=roll_pk,
-    )
+    roll = get_object_or_404(FilmRoll, pk=roll_pk)
+    if not _user_can_access_roll(request.user, roll):
+        raise Http404
+    if not roll.projects.filter(pk=project.pk).exists():
+        return redirect("roll_detail_direct", roll_pk=roll_pk)
+    return _roll_detail(request, project, roll)
+
+
+@login_required
+def roll_detail_direct(request, roll_pk):
+    roll = get_object_or_404(FilmRoll, pk=roll_pk, owner=request.user)
+    project = roll.projects.filter(owner=request.user).first()
+    return _roll_detail(request, project, roll)
+
+
+def _roll_detail(request, project, roll):
+    roll_pk = roll.pk
     instance = None
     form = FrameNoteForm(roll=roll)
     roll_form = FilmRollForm(instance=roll)
@@ -153,18 +228,16 @@ def roll_detail(request, project_pk, roll_pk):
             label = str(roll)
             roll.delete()
             messages.success(request, f"Deleted roll {label}.")
-            return redirect("project_detail", pk=project_pk)
+            if project is not None:
+                return redirect("project_detail", pk=project.pk)
+            return redirect("roll_list")
 
         elif action == "edit_roll":
             roll_form = FilmRollForm(request.POST, instance=roll)
             if roll_form.is_valid():
                 roll_form.save()
                 messages.success(request, "Roll updated.")
-                return redirect(
-                    "roll_detail",
-                    project_pk=project_pk,
-                    roll_pk=roll_pk,
-                )
+                return redirect(_roll_url(project, roll_pk))
             show_roll_edit = True
 
         elif action == "import_folder":
@@ -195,11 +268,7 @@ def roll_detail(request, project_pk, roll_pk):
                 )
             if not result.imported and not result.skipped:
                 messages.error(request, "No files to import.")
-            return redirect(
-                "roll_detail",
-                project_pk=project_pk,
-                roll_pk=roll_pk,
-            )
+            return redirect(_roll_url(project, roll_pk))
 
         elif action == "clear_images":
             removed = clear_roll_images(roll)
@@ -210,11 +279,7 @@ def roll_detail(request, project_pk, roll_pk):
                 )
             else:
                 messages.info(request, "No scans to clear on this roll.")
-            return redirect(
-                "roll_detail",
-                project_pk=project_pk,
-                roll_pk=roll_pk,
-            )
+            return redirect(_roll_url(project, roll_pk))
 
         elif action == "toggle_favorite":
             raw = request.POST.get("frame_number")
@@ -237,7 +302,7 @@ def roll_detail(request, project_pk, roll_pk):
                             "is_favorite": frame.is_favorite,
                         }
                     )
-            return redirect(_roll_url(project_pk, roll_pk))
+            return redirect(_roll_url(project, roll_pk))
 
         elif action == "delete_frame":
             raw = request.POST.get("frame_number")
@@ -248,17 +313,12 @@ def roll_detail(request, project_pk, roll_pk):
                 label = frame.display_number
                 frame.delete()
                 messages.success(request, f"Deleted frame {label}.")
-            return redirect(_roll_url(project_pk, roll_pk))
+            return redirect(_roll_url(project, roll_pk))
 
         elif action == "save_frame":
             raw = request.POST.get("frame_number")
             is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
             instance = _get_frame(roll, raw)
-            if is_ajax and instance is None:
-                return JsonResponse(
-                    {"error": "Could not find that frame."},
-                    status=404,
-                )
             form = FrameNoteForm(
                 request.POST, request.FILES, roll=roll, instance=instance
             )
@@ -274,9 +334,13 @@ def roll_detail(request, project_pk, roll_pk):
                             "note": frame.note,
                         }
                     )
-                return redirect(
-                    _roll_url(project_pk, roll_pk, frame.frame_number, panel=True)
-                )
+                if request.FILES.get("image"):
+                    return redirect(
+                        _roll_url(
+                            project, roll_pk, frame.frame_number, panel=True
+                        )
+                    )
+                return redirect(_roll_url(project, roll_pk))
             if is_ajax:
                 return JsonResponse(
                     {"error": form.errors.get_json_data()},
@@ -291,7 +355,7 @@ def roll_detail(request, project_pk, roll_pk):
             and request.GET.get("panel") != "1"
             and request.GET.get("log") != "1"
         ):
-            return redirect(_roll_url(project_pk, roll_pk))
+            return redirect(_roll_url(project, roll_pk))
         if request.GET.get("panel") == "1" and raw:
             instance = _get_frame(roll, raw)
             show_log_frame = instance is not None
@@ -300,14 +364,18 @@ def roll_detail(request, project_pk, roll_pk):
             show_log_frame = True
         else:
             instance = None
-        form = FrameNoteForm(roll=roll, instance=instance)
+        form_initial = None
+        if instance is None:
+            form_initial = {"frame_number": _suggested_frame_number(roll)}
+        form = FrameNoteForm(roll=roll, instance=instance, initial=form_initial)
         show_import = request.GET.get("import") == "1"
         show_roll_edit = request.GET.get("edit") == "1"
 
     frames = roll.frames.all()
     has_scans = any(frame.image.name for frame in frames)
-    if request.method != "POST" and not frames.exists() and not has_scans:
-        show_import = True
+    if request.method != "POST" and not frames.exists():
+        show_import = request.GET.get("import") == "1"
+        show_log_frame = not show_import
 
     return render(
         request,

@@ -11,6 +11,18 @@
     <div class="site-header__inner">
       <a class="site-brand" href="{% url 'home' %}">Frame Notes</a>
       <div class="site-header__nav">
+        {% if user.is_authenticated %}
+          <nav class="site-primary-nav" aria-label="Main">
+            <a
+              class="site-primary-nav__link{% if request.resolver_match.url_name == 'project_list' or request.resolver_match.url_name == 'project_detail' %} is-active{% endif %}"
+              href="{% url 'project_list' %}"
+            >Projects</a>
+            <a
+              class="site-primary-nav__link{% if request.resolver_match.url_name == 'roll_list' or request.resolver_match.url_name == 'roll_detail' or request.resolver_match.url_name == 'roll_detail_direct' %} is-active{% endif %}"
+              href="{% url 'roll_list' %}"
+            >Rolls</a>
+          </nav>
+        {% endif %}
         {% block back_link %}{% endblock %}
         <nav class="site-auth" aria-label="Account">
           {% if user.is_authenticated %}

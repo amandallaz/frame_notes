@@ -14,14 +14,14 @@ Living plan for what’s shipped, what’s next, and what’s later.
 - Lightbox viewing
 - Favorites
 - In-lightbox note editing (AJAX)
+- Shoot-first logging (new rolls open **Log frame note**; notes-only list + icon strip before scans)
+- Rolls index (`/projects/rolls/`) with preview strip; rolls keep `owner` when project is deleted
+- Header nav: **Projects** | **Rolls** (account menu for logout / delete only)
+- Delete roll confirmation
 
----
+### Workflow testing (localhost) — passed
 
-## Next
-
-### Workflow testing (localhost)
-
-Test the complete photographer workflow:
+Full photographer flow verified on localhost:
 
 - Create account
 - Create project
@@ -35,17 +35,17 @@ Test the complete photographer workflow:
 - Delete project
 - Delete account
 
-Then:
+**Edge case noted:** deleting a user removes owned projects (CASCADE); rolls linked only via M2M may remain until explicitly deleted — mitigated by `FilmRoll.owner` on create and on project delete.
 
-- Document bugs and friction points
-- Fix issues discovered during testing
+---
 
-**Edge cases to check:** deleting a user removes owned projects (CASCADE); rolls linked only via M2M may remain until explicitly deleted.
+## Next
 
 ### Data / auth hardening
 
 - Backfill `Project.owner` for any legacy null rows
 - Migration to require `Project.owner` (`null=False`)
+- Same for `FilmRoll.owner` if desired
 
 ### Image storage
 
@@ -71,7 +71,7 @@ Then:
 
 ## Production deployment
 
-**After** image storage and workflow testing are solid.
+**After** image storage and external testing are solid.
 
 - Review Django security settings
 - Configure environment variables and secrets
@@ -83,7 +83,7 @@ Then:
 
 ## Product improvements
 
-- Rolls-first home page
+- Rolls-first home page (rolls index + nav exist; optional default landing on Rolls)
 - Favorites filtering
 - Search and filtering
 - Archive workflow (`is_archived` exists on the model)
@@ -105,4 +105,4 @@ Then:
 
 ## Notes
 
-Current focus: validate the full photographer workflow on localhost, then Cloudinary + external access, then deploy and invite real users. Expand the feature set after that.
+Current focus: Cloudinary + external access, then deploy and invite real users. Expand the feature set after that.

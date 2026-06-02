@@ -1,0 +1,47 @@
+{% extends "studio/base.html" %}
+{% block title %}Rolls — Frame Notes{% endblock %}
+{% block content %}
+  <h1>Rolls</h1>
+
+  {% if messages %}
+    <ul class="messages">
+      {% for message in messages %}
+        <li class="{{ message.tags }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if not roll_rows %}
+    <p class="lead">No rolls yet.</p>
+  {% else %}
+    <ul class="roll-list">
+      {% for row in roll_rows %}
+        <li class="roll-list__item">
+          <div class="roll-list__main">
+            {% if row.project %}
+              <a class="roll-list__title" href="{% url 'roll_detail' row.project.pk row.roll.pk %}">{{ row.roll }}</a>
+            {% else %}
+              <a class="roll-list__title" href="{% url 'roll_detail_direct' row.roll.pk %}">{{ row.roll }}</a>
+            {% endif %}
+            <span class="roll-list__meta">
+              {% if row.project %}{{ row.project.title }}{% else %}No project{% endif %}
+              {% if row.roll.get_status_display %} · {{ row.roll.get_status_display }}{% endif %}
+              {% if row.frame_count %} · {{ row.frame_count }} frame{{ row.frame_count|pluralize }}{% endif %}
+            </span>
+          </div>
+          {% if row.preview_frames %}
+            <div class="roll-list__strip" aria-hidden="true">
+              {% for frame in row.preview_frames %}
+                <img
+                  class="roll-list__thumb"
+                  src="{{ frame.image.url }}?v={{ row.roll.updated_at|date:'U' }}"
+                  alt="Frame {{ frame.display_number }}"
+                >
+              {% endfor %}
+            </div>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}

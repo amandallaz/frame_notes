@@ -53,6 +53,13 @@ class FilmRoll(models.Model):
         EXPOSED = "exposed", "Exposed"
         AT_LAB = "at_lab", "At lab"
         SCANNED = "scanned", "Scanned"
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="film_rolls",
+        null=True,
+        blank=True,
+    )
     projects = models.ManyToManyField(
         Project,
         related_name="rolls",

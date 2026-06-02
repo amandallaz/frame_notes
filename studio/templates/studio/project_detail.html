@@ -49,7 +49,7 @@
       <ul class="card-list">
         {% for roll in rolls %}
           <li>
-            <a href="{% url 'roll_detail' project.pk roll.pk %}">{{ roll }}</a>
+            <a href="{% url 'roll_detail' project.pk roll.pk %}{% if not roll.frames.exists %}?log=1{% endif %}">{{ roll }}</a>
             {% if roll.stock or roll.status %}
               <p>
                 {% if roll.stock %}{{ roll.stock }}{% endif %}

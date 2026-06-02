@@ -10,6 +10,14 @@
         {% if roll.get_status_display %} · {{ roll.get_status_display }}{% endif %}
       </p>
     {% endif %}
+    {% if frames %}
+      <p class="roll-page-actions meta">
+        <a href="?log=1">+ Log frame</a>
+        {% if not has_scans %}
+          · <a href="?import=1">Import scans when ready</a>
+        {% endif %}
+      </p>
+    {% endif %}
   </div>
 
   {% if messages %}
@@ -20,8 +28,62 @@
     </ul>
   {% endif %}
 
-  <section class="section section--frames">
-    {% if frames %}
+  <section class="section section--frames{% if frames and not has_scans %} section--frames-notes{% endif %}">
+    {% if not frames %}
+      <div class="shoot-log-cta">
+        <p class="lead">Log exposure notes while you shoot. Lab scans can be added later.</p>
+        <a class="shoot-log-cta__link" href="?log=1">Log your first frame →</a>
+      </div>
+    {% endif %}
+    {% if frames and not has_scans %}
+      <p class="frame-log-list__hint meta">Notes only — contact sheet appears after you import scans.</p>
+      <div class="frame-roll-view">
+        <ul class="frame-icon-strip" aria-label="Frames on this roll">
+          {% for frame in frames %}
+            <li
+              class="frame-icon-strip__item{% if frame.is_favorite %} is-favorite{% endif %}{% if editing and form.instance.frame_number == frame.frame_number %} is-active{% endif %}"
+              data-frame-number="{{ frame.frame_number }}"
+            >
+              <button
+                type="button"
+                class="frame-icon-strip__btn"
+                data-frame-number="{{ frame.frame_number }}"
+                aria-label="Frame {{ frame.display_number }}{% if frame.note %}: {{ frame.note|truncatechars:40 }}{% endif %}"
+              >
+                <span class="frame-icon-strip__label">{{ frame.display_number }}</span>
+              </button>
+            </li>
+          {% endfor %}
+        </ul>
+        <ul class="frame-log-list">
+          {% for frame in frames %}
+            <li
+              class="frame-grid__cell frame-log-list__row{% if frame.is_favorite %} is-favorite{% endif %}{% if editing and form.instance.frame_number == frame.frame_number %} is-active{% endif %}"
+              data-frame-number="{{ frame.frame_number }}"
+              data-frame-label="{{ frame.display_number }}"
+              {% if frame.scan_filename %}data-scan="{{ frame.scan_filename }}"{% endif %}
+            >
+              <button
+                type="button"
+                class="frame-log-list__main frame-grid__open"
+                aria-label="Frame {{ frame.display_number }}{% if frame.note %}: {{ frame.note }}{% endif %}"
+              >
+                <span class="frame-log-list__text">
+                  {% if frame.note %}{{ frame.note }}{% else %}<em>No note yet — tap to add</em>{% endif %}
+                </span>
+              </button>
+              <button
+                type="button"
+                class="btn-favorite frame-grid__favorite"
+                data-frame-label="{{ frame.display_number }}"
+                aria-label="Favorite frame {{ frame.display_number }}"
+              >☆</button>
+              <template class="frame-grid__note-data">{{ frame.note }}</template>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% elif frames %}
       <div class="filmstrip">
       <p class="filmstrip__label">{% if roll.stock %}{{ roll.stock }}{% else %}Contact sheet{% endif %}</p>
       <ul class="frame-grid">
@@ -74,8 +136,6 @@
         {% endfor %}
       </ul>
       </div>
-    {% else %}
-      <p class="lead">No frame notes yet.</p>
     {% endif %}
   </section>
 
@@ -85,7 +145,7 @@
       <button type="button" class="frame-lightbox__nav frame-lightbox__nav--prev" id="frame-lightbox-prev" aria-label="Previous frame">‹</button>
       <div class="frame-lightbox__media">
         <img class="frame-lightbox__img" id="frame-lightbox-img" src="" alt="" hidden>
-        <p class="frame-lightbox__placeholder" id="frame-lightbox-placeholder" hidden>No scan</p>
+        <p class="frame-lightbox__placeholder" id="frame-lightbox-placeholder" hidden>Note only — no scan yet</p>
       </div>
       <button type="button" class="frame-lightbox__nav frame-lightbox__nav--next" id="frame-lightbox-next" aria-label="Next frame">›</button>
       <p class="frame-lightbox__frame-label" id="frame-lightbox-title"></p>
@@ -118,20 +178,42 @@
     </div>
   </dialog>
 
-  <div class="roll-tools">
-    <details class="create-panel roll-panel"{% if show_log_frame %} open{% endif %}>
+  <div class="roll-tools{% if frames and not has_scans %} roll-tools--notes{% endif %}">
+    <details class="create-panel roll-panel roll-panel--log"{% if show_log_frame %} open{% endif %}>
       <summary class="create-panel__trigger">
-        {% if editing %}Edit frame {{ form.instance.display_number }}{% else %}Add new frame{% endif %}
+        {% if editing %}Edit frame {{ form.instance.display_number }}{% else %}Log frame note{% endif %}
       </summary>
       <div class="create-panel__body">
+        {% if not editing %}
+          <p class="form-hint">No scan required — add f-stop, shutter, or subject notes while shooting.</p>
+        {% endif %}
         <form method="post" enctype="multipart/form-data">
           {% csrf_token %}
           <input type="hidden" name="action" value="save_frame">
-          {{ form.as_p }}
-          <button type="submit">{% if editing %}Update frame{% else %}Save frame{% endif %}</button>
+          <p>
+            <label for="{{ form.frame_number.id_for_label }}">Frame number</label>
+            {{ form.frame_number }}
+            {% if form.frame_number.errors %}<span class="error">{{ form.frame_number.errors }}</span>{% endif %}
+          </p>
+          <p>
+            <label for="{{ form.note.id_for_label }}">Note</label>
+            {{ form.note }}
+            {% if form.note.errors %}<span class="error">{{ form.note.errors }}</span>{% endif %}
+          </p>
+          <details class="log-frame-optional-scan">
+            <summary>Lab scan (optional)</summary>
+            <p class="form-hint">Upload a scan now, or import a folder later.</p>
+            <p>
+              <label for="{{ form.image.id_for_label }}">Image</label>
+              {{ form.image }}
+            </p>
+          </details>
+          <button type="submit">{% if editing %}Update frame{% else %}Save note{% endif %}</button>
         </form>
         {% if editing %}
-          <p><a href="{% url 'roll_detail' project.pk roll.pk %}">+ Log a new frame</a></p>
+          <p>
+            <a href="{% if project %}{% url 'roll_detail' project.pk roll.pk %}{% else %}{% url 'roll_detail_direct' roll.pk %}{% endif %}?log=1">+ Log a new frame</a>
+          </p>
           {% if form.instance.scan_filename %}
             <p class="meta">Lab scan file: <code>{{ form.instance.scan_filename }}</code></p>
           {% endif %}
@@ -212,21 +294,35 @@
   </div>
 
   <section class="section section--danger section--align-end">
-    <form
-      method="post"
-      onsubmit="return confirm('Delete this roll? All frame notes and scans will be removed.')"
-    >
+    <form method="post" id="delete-roll-form">
       {% csrf_token %}
       <input type="hidden" name="action" value="delete_roll">
-      <button type="submit" class="btn--danger">Delete roll</button>
+      <button type="button" class="btn--danger" id="delete-roll-btn">Delete roll</button>
     </form>
   </section>
 {% endblock %}
 {% block back_link %}
-  <a class="site-back" href="{% url 'project_detail' project.pk %}">{{ project.title }}</a>
+  {% if project %}
+    <a class="site-back" href="{% url 'project_detail' project.pk %}">{{ project.title }}</a>
+  {% endif %}
 {% endblock %}
 {% block extra_js %}
   <script>
+    (function () {
+      const deleteRollBtn = document.getElementById("delete-roll-btn");
+      const deleteRollForm = document.getElementById("delete-roll-form");
+      if (!deleteRollBtn || !deleteRollForm) return;
+      const rollLabel = "{{ roll|escapejs }}";
+      deleteRollBtn.addEventListener("click", function () {
+        const ok = confirm(
+          "Are you sure you want to delete roll “" + rollLabel + "”? "
+            + "All frame notes and scans on this roll will be removed. "
+            + "This cannot be undone."
+        );
+        if (ok) deleteRollForm.requestSubmit();
+      });
+    })();
+
     function naturalKey(name) {
       return name.split(/(\d+)/).map((part, i) =>
         i % 2 === 1 ? parseInt(part, 10) : part.toLowerCase()
@@ -370,6 +466,15 @@
         template.innerHTML = "";
         template.content.appendChild(document.createTextNode(note));
       }
+      const listText = cell.querySelector(".frame-log-list__text");
+      if (listText) {
+        if (note) {
+          listText.textContent = note;
+        } else {
+          listText.innerHTML = "<em>No note yet</em>";
+        }
+        return;
+      }
       let noteEl = cell.querySelector(".frame-grid__note");
       if (note) {
         if (!noteEl) {
@@ -423,11 +528,22 @@
       }
     }
 
+    function setActiveFrameHighlight(frameNumber) {
+      const num = String(frameNumber);
+      document.querySelectorAll(".frame-icon-strip__item").forEach((el) => {
+        el.classList.toggle("is-active", el.dataset.frameNumber === num);
+      });
+      document.querySelectorAll(".frame-log-list__row").forEach((el) => {
+        el.classList.toggle("is-active", el.dataset.frameNumber === num);
+      });
+    }
+
     function showLightboxAt(index) {
       if (!frameCells.length) return;
       lightboxIndex = Math.max(0, Math.min(index, frameCells.length - 1));
       const cell = frameCells[lightboxIndex];
       const data = frameDataFromCell(cell);
+      setActiveFrameHighlight(data.frameNumber);
 
       if (data.imageUrl) {
         lbImg.src = data.imageUrl;
@@ -485,6 +601,15 @@
     document.querySelectorAll(".frame-grid__open").forEach((btn) => {
       btn.addEventListener("click", () => {
         openLightboxForCell(btn.closest(".frame-grid__cell"));
+      });
+    });
+
+    document.querySelectorAll(".frame-icon-strip__btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const cell = document.querySelector(
+          `.frame-log-list__row[data-frame-number="${btn.dataset.frameNumber}"]`
+        );
+        if (cell) openLightboxForCell(cell);
       });
     });
 
