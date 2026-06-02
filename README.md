@@ -39,13 +39,7 @@ Django’s built-in **User** owns **Project** records. **FilmRoll** represents a
 
 ## Roadmap
 
-- Require `Project.owner` (non-null) after data migration for legacy rows
-- Rolls-first home / index view
-- Filter projects and contact sheets by favorites
-- Darkroom print tracking
-- Advanced search and filtering
-- Mobile-friendly workflow
-- Production deployment
+See [ROADMAP.md](ROADMAP.md) for planned work (next up: workflow testing, required project owner, Cloudinary, then deploy).
 
 ---
 
