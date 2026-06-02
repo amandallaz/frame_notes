@@ -39,7 +39,7 @@ Django’s built-in **User** owns **Project** records. **FilmRoll** represents a
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for planned work (next up: workflow testing, required project owner, Cloudinary, then deploy).
+See [ROADMAP.md](ROADMAP.md) for planned work (next up: external testing, production deploy).
 
 ---
 
@@ -66,9 +66,46 @@ python manage.py runserver
 
 Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/) — use **Sign up** or **Log in** to reach your projects.
 
-Scans are stored in `media/` (gitignored). After cloning, create an account and add projects from the app, or assign `Project.owner` in the shell for any existing rows from before accounts were added.
+Copy `.env.example` to `.env` and add **Cloudinary** credentials for cloud scans; without them, files go to `media/` (gitignored).
 
-Import images from the **Import folder** panel on any roll.
+After cloning, create an account and add projects from the app. Import images from the **Import folder** panel on any roll.
+
+---
+
+## Test on your phone (ngrok)
+
+Expose your local `runserver` with a public HTTPS URL.
+
+1. Install [ngrok](https://ngrok.com/download) and sign in (free account).
+2. Terminal 1 — app:
+
+   ```bash
+   source venv/bin/activate
+   python manage.py runserver
+   ```
+
+3. Terminal 2 — tunnel (port **8000**, not 80):
+
+   ```bash
+   ngrok http 8000
+   ```
+
+   If your ngrok account has a reserved dev domain (see [Domains](https://dashboard.ngrok.com/domains)):
+
+   ```bash
+   ngrok http --url=your-name.ngrok-free.dev 8000
+   ```
+
+4. Copy the **https** forwarding URL (e.g. `https://your-name.ngrok-free.dev`).
+5. Add to `.env`:
+
+   ```env
+   NGROK_ORIGIN=https://your-name.ngrok-free.dev
+   ```
+
+6. Restart `runserver`, then open that URL on your phone or send it to a friend.
+
+`ALLOWED_HOSTS` allows ngrok hostnames in debug mode. `NGROK_ORIGIN` is required so login and POST requests pass CSRF checks. The tunnel only works while your Mac is running both `runserver` and ngrok.
 
 ---
 

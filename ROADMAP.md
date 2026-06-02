@@ -19,6 +19,7 @@ Living plan for what’s shipped, what’s next, and what’s later.
 - Header nav: **Projects** | **Rolls** (account menu for logout / delete only)
 - Delete roll confirmation
 - Required `Project.owner` and `FilmRoll.owner` (migration `0011_require_owner` with backfill)
+- ngrok dev tunnel support (`ALLOWED_HOSTS`, `NGROK_ORIGIN` for CSRF) — see README
 
 ### Workflow testing (localhost) — passed
 
@@ -50,9 +51,9 @@ Full photographer flow verified on localhost:
 
 ### External testing
 
-- Test application through ngrok
-- Verify image uploads through Cloudinary
-- Test on desktop and mobile browsers
+- ~~Test application through ngrok~~ — basic mobile access verified
+- Verify image uploads through Cloudinary (on ngrok / production)
+- Test on desktop and mobile browsers (broader flows: import, delete, account)
 - Test account creation and authentication outside localhost
 
 ### User testing
@@ -100,4 +101,4 @@ Full photographer flow verified on localhost:
 
 ## Notes
 
-Current focus: Cloudinary + external access, then deploy and invite real users. Expand the feature set after that.
+Current focus: finish Cloudinary checks on ngrok, then deploy and invite real users. ngrok is for dev testing only (Mac must stay on).

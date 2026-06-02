@@ -32,7 +32,30 @@ SECRET_KEY = "django-insecure-4_^4$c9r0hdtj#@q$8r*c^0+79_%&!b4xe)8tgm_s&ldalrvn8
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".localhost"]
+if DEBUG:
+    ALLOWED_HOSTS.extend(
+        [".ngrok-free.app", ".ngrok-free.dev", ".ngrok.io", ".ngrok.app"]
+    )
+
+_extra_hosts = os.environ.get("ALLOWED_HOSTS", "")
+if _extra_hosts:
+    ALLOWED_HOSTS.extend(
+        host.strip() for host in _extra_hosts.split(",") if host.strip()
+    )
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+_trusted = os.environ.get("CSRF_TRUSTED_ORIGINS", "")
+if _trusted:
+    CSRF_TRUSTED_ORIGINS.extend(
+        origin.strip() for origin in _trusted.split(",") if origin.strip()
+    )
+_ngrok_origin = os.environ.get("NGROK_ORIGIN", "").strip()
+if _ngrok_origin:
+    CSRF_TRUSTED_ORIGINS.append(_ngrok_origin)
 
 
 # Application definition
