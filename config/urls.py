@@ -17,6 +17,6 @@ urlpatterns = [
     path("projects/", include("studio.urls")),
 ]
 
-if settings.DEBUG:
+if settings.DEBUG and not settings.USE_CLOUDINARY_STORAGE:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

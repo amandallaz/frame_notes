@@ -1,39 +1,40 @@
 {% extends "studio/base.html" %}
 {% block title %}{{ project.title }} — Frame Notes{% endblock %}
 {% block content %}
-  <div class="page-header">
-    <h1>{{ project.title }}</h1>
-    {% if project.description %}
-      <p class="lead">{{ project.description }}</p>
-    {% endif %}
-  </div>
-
-  <div class="page-actions">
-    <details class="create-panel create-panel--inline"{% if show_edit_project %} open{% endif %}>
-      <summary class="create-panel__trigger">Edit</summary>
-      <div class="create-panel__body">
-        <form method="post">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="edit_project">
-          {{ project_form.as_p }}
-          <button type="submit">Update project</button>
-        </form>
-      </div>
-    </details>
-    <details class="create-panel create-panel--inline"{% if show_add_roll %} open{% endif %}>
-      <summary class="create-panel__trigger">+ Add roll</summary>
-      <div class="create-panel__body">
-        {% if not rolls %}
-          <p class="lead">Add your first roll to this project.</p>
-        {% endif %}
-        <form method="post">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="create_roll">
-          {{ roll_form.as_p }}
-          <button type="submit">Save roll</button>
-        </form>
-      </div>
-    </details>
+  <div class="page-header page-header--split">
+    <div class="page-header__intro">
+      <h1>{{ project.title }}</h1>
+      {% if project.description %}
+        <p class="lead">{{ project.description }}</p>
+      {% endif %}
+    </div>
+    <div class="page-header__tools">
+      <details class="create-panel create-panel--inline"{% if show_edit_project %} open{% endif %}>
+        <summary class="create-panel__trigger">Edit</summary>
+        <div class="create-panel__body">
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit_project">
+            {{ project_form.as_p }}
+            <button type="submit">Update project</button>
+          </form>
+        </div>
+      </details>
+      <details class="create-panel create-panel--inline"{% if show_add_roll %} open{% endif %}>
+        <summary class="create-panel__trigger">+ Add roll</summary>
+        <div class="create-panel__body">
+          {% if not rolls %}
+            <p class="lead">Add your first roll to this project.</p>
+          {% endif %}
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create_roll">
+            {{ roll_form.as_p }}
+            <button type="submit">Save roll</button>
+          </form>
+        </div>
+      </details>
+    </div>
   </div>
 
   {% if messages %}
@@ -72,7 +73,4 @@
       <button type="submit" class="btn--danger">Delete project</button>
     </form>
   </section>
-{% endblock %}
-{% block back_link %}
-  <a class="site-back" href="{% url 'project_list' %}">All projects</a>
 {% endblock %}

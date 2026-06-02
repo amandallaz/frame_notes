@@ -8,9 +8,9 @@ from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
-from .folder_import import clear_roll_images, import_roll_folder
+from .folder_import import clear_roll_images, import_roll_folder, set_frame_one
 from .forms import FilmRollForm, FrameNoteForm, ProjectForm, SignUpForm
-from .models import FilmRoll, FrameNote, Project
+from .models import FilmRoll, FrameNote, Project, frame_display
 
 
 class StudioLoginView(LoginView):
@@ -62,6 +62,28 @@ def _user_projects(user):
 def _suggested_frame_number(roll):
     nums = list(roll.frames.values_list("frame_number", flat=True))
     return max(nums) + 1 if nums else 1
+
+
+def _handle_set_frame_one(request, roll, project, roll_pk):
+    raw_source = request.POST.get("frame_one_source", "").strip()
+    try:
+        source_frame_number = int(raw_source)
+    except ValueError:
+        messages.error(request, "Choose which scan should be frame 1.")
+        return redirect(_roll_url(project, roll_pk))
+    try:
+        delta = set_frame_one(roll, source_frame_number)
+    except ValueError as exc:
+        messages.error(request, str(exc))
+        return redirect(_roll_url(project, roll_pk))
+    if delta == 0:
+        messages.info(request, "That scan is already frame 1.")
+    else:
+        messages.success(
+            request,
+            f"That scan is now frame 1. Other frames were renumbered to match.",
+        )
+    return redirect(_roll_url(project, roll_pk))
 
 def home(request):
     if request.user.is_authenticated:
@@ -270,6 +292,9 @@ def _roll_detail(request, project, roll):
                 messages.error(request, "No files to import.")
             return redirect(_roll_url(project, roll_pk))
 
+        elif action == "set_frame_one" or request.POST.get("frame_one_source") is not None:
+            return _handle_set_frame_one(request, roll, project, roll_pk)
+
         elif action == "clear_images":
             removed = clear_roll_images(roll)
             if removed:
@@ -315,7 +340,7 @@ def _roll_detail(request, project, roll):
                 messages.success(request, f"Deleted frame {label}.")
             return redirect(_roll_url(project, roll_pk))
 
-        elif action == "save_frame":
+        elif action == "save_frame" and request.POST.get("frame_one_source") is None:
             raw = request.POST.get("frame_number")
             is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
             instance = _get_frame(roll, raw)

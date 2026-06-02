@@ -33,8 +33,6 @@ class Project(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="projects",
-        null=True,
-        blank=True,
     )
 
     class Meta:
@@ -57,8 +55,6 @@ class FilmRoll(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="film_rolls",
-        null=True,
-        blank=True,
     )
     projects = models.ManyToManyField(
         Project,

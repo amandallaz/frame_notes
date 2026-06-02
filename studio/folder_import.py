@@ -109,6 +109,36 @@ def import_roll_folder(
     return result
 
 
+def set_frame_one(roll, source_frame_number: int) -> int:
+    """Shift every frame on the roll so source_frame_number becomes frame 1."""
+    return reanchor_roll_frames(roll, source_frame_number, anchor_frame_number=1)
+
+
+def reanchor_roll_frames(roll, source_frame_number: int, anchor_frame_number: int) -> int:
+    """
+    Shift every frame on the roll so source_frame_number becomes anchor_frame_number.
+    Returns the delta applied, or 0 if unchanged.
+    """
+    from .models import FrameNote
+
+    frames = list(FrameNote.objects.filter(roll=roll).order_by("frame_number"))
+    if not frames:
+        return 0
+    if not any(f.frame_number == source_frame_number for f in frames):
+        raise ValueError(f"No frame {source_frame_number} on this roll.")
+    delta = anchor_frame_number - source_frame_number
+    if delta == 0:
+        return 0
+    originals = {frame.pk: frame.frame_number for frame in frames}
+    for i, frame in enumerate(frames):
+        frame.frame_number = 10_000 + i
+        frame.save(update_fields=["frame_number"])
+    for frame in frames:
+        frame.frame_number = originals[frame.pk] + delta
+        frame.save(update_fields=["frame_number"])
+    return delta
+
+
 def clear_roll_images(roll) -> int:
     """Remove all scans on a roll. Keeps text notes; drops image-only frames."""
     removed = 0

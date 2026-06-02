@@ -195,18 +195,21 @@
     border-bottom: none;
   }
   .site-brand:hover { color: var(--accent); }
-  .site-back {
-    font-size: 0.9rem;
-    color: var(--muted);
-    border-bottom: none;
-    white-space: nowrap;
-  }
-  .site-back:hover {
-    color: var(--accent);
-  }
-  .site-back ~ .site-auth {
+  .site-primary-nav + .site-auth {
     padding-left: 1.25rem;
+    margin-left: 0.15rem;
     border-left: 1px solid var(--border);
+  }
+  .page-context {
+    margin: 0 0 0.35rem;
+  }
+  .page-context a {
+    border-bottom: none;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .page-context a:hover {
+    color: var(--accent);
   }
   main {
     max-width: var(--max-width);
@@ -351,14 +354,35 @@
   .page-header--split {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 0.75rem 1.5rem;
+  }
+  .page-header__intro {
+    flex: 1 1 12rem;
+    min-width: 0;
+  }
+  .page-header__tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 0.75rem 1.25rem;
+    flex: 0 1 auto;
   }
   .page-header--split .create-panel:not([open]) {
     margin-bottom: 0;
   }
-  .page-header--split .create-panel[open] {
+  .page-header--split > .create-panel[open] {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  .page-header__tools:has(.create-panel[open]) {
+    flex: 1 1 100%;
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .page-header__tools .create-panel[open] {
     flex: 1 1 100%;
     width: 100%;
   }
@@ -1255,6 +1279,27 @@
   #folder-preview li.is-frame-1 {
     background: var(--success-bg);
     font-weight: 600;
+  }
+  .roll-panel--frame-one select {
+    display: block;
+    width: 100%;
+    max-width: 28rem;
+    margin-top: 0.35rem;
+  }
+  .frame-lightbox__set-frame-one {
+    display: block;
+    margin-top: 0.5rem;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: 0.9rem;
+    color: var(--accent);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .frame-lightbox__set-frame-one:hover {
+    color: var(--text);
   }
   #folder-preview li.is-leader {
     background: var(--warning-bg);

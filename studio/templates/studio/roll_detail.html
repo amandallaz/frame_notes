@@ -3,6 +3,11 @@
 {% block main_class %}main--wide{% endblock %}
 {% block content %}
   <div class="page-header">
+    {% if project %}
+      <p class="page-context meta">
+        <a href="{% url 'project_detail' project.pk %}">{{ project.title }}</a>
+      </p>
+    {% endif %}
     <h1>{{ roll }}</h1>
     {% if roll.stock or roll.get_status_display %}
       <p class="lead">
@@ -84,7 +89,7 @@
         </ul>
       </div>
     {% elif frames %}
-      <div class="filmstrip">
+      <div class="filmstrip" id="contact-sheet">
       <p class="filmstrip__label">{% if roll.stock %}{{ roll.stock }}{% else %}Contact sheet{% endif %}</p>
       <ul class="frame-grid">
         {% for frame in frames %}
@@ -174,11 +179,41 @@
         <button type="button" class="frame-lightbox__save" id="frame-lightbox-save">Save note</button>
         <span class="frame-lightbox__save-status" id="frame-lightbox-save-status" hidden></span>
         <a class="frame-lightbox__full-edit" id="frame-lightbox-full-edit" href="#">Upload image</a>
+        <button type="button" class="frame-lightbox__set-frame-one" id="frame-lightbox-set-frame-one" hidden>
+          Set this scan as frame 1
+        </button>
       </div>
     </div>
   </dialog>
 
   <div class="roll-tools{% if frames and not has_scans %} roll-tools--notes{% endif %}">
+    {% if has_scans %}
+      <details class="create-panel roll-panel roll-panel--frame-one">
+        <summary class="create-panel__trigger">Set frame 1</summary>
+        <div class="create-panel__body">
+          <p class="form-hint">
+            Choose which scan is <strong>frame 1</strong>. Other frames renumber to match (2, 3, 4… or 0, 00 before it).
+          </p>
+          <form method="post" id="set-frame-one-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="set_frame_one">
+            <p>
+              <label for="frame-one-source">This scan is frame 1</label>
+              <select name="frame_one_source" id="frame-one-source" required>
+                {% for frame in frames %}
+                  {% if frame.image.name %}
+                    <option value="{{ frame.frame_number }}">
+                      Frame {{ frame.display_number }}{% if frame.scan_filename %} — {{ frame.scan_filename }}{% endif %}
+                    </option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+            </p>
+            <button type="submit">Apply</button>
+          </form>
+        </div>
+      </details>
+    {% endif %}
     <details class="create-panel roll-panel roll-panel--log"{% if show_log_frame %} open{% endif %}>
       <summary class="create-panel__trigger">
         {% if editing %}Edit frame {{ form.instance.display_number }}{% else %}Log frame note{% endif %}
@@ -264,7 +299,8 @@
               Reverse order (first file = highest frame number)
             </label>
           </p>
-          <button type="submit">Import scans</button>
+          <button type="submit" id="import-submit">Import scans</button>
+          <p class="import-status meta" id="import-status" hidden role="status"></p>
         </form>
         {% if has_scans %}
           <form
@@ -300,11 +336,6 @@
       <button type="button" class="btn--danger" id="delete-roll-btn">Delete roll</button>
     </form>
   </section>
-{% endblock %}
-{% block back_link %}
-  {% if project %}
-    <a class="site-back" href="{% url 'project_detail' project.pk %}">{{ project.title }}</a>
-  {% endif %}
 {% endblock %}
 {% block extra_js %}
   <script>
@@ -389,6 +420,26 @@
     document.getElementById("first-file-index").addEventListener("input", updatePreview);
     document.getElementById("reverse-order").addEventListener("change", updatePreview);
 
+    const importForm = document.getElementById("import-form");
+    const importSubmit = document.getElementById("import-submit");
+    const importStatus = document.getElementById("import-status");
+    if (importForm && importSubmit && importStatus) {
+      importForm.addEventListener("submit", () => {
+        const input = document.getElementById("lab-folder");
+        const imageRe = /\.(jpe?g|png|webp)$/i;
+        let count = 0;
+        if (input?.files) {
+          count = Array.from(input.files).filter((f) => imageRe.test(f.name)).length;
+        }
+        importSubmit.disabled = true;
+        importSubmit.textContent = "Importing…";
+        importStatus.hidden = false;
+        importStatus.textContent = count
+          ? `Uploading ${count} scan${count === 1 ? "" : "s"} to Cloudinary — this can take a minute. Keep this tab open.`
+          : "Uploading — keep this tab open.";
+      });
+    }
+
     const lightbox = document.getElementById("frame-lightbox");
     const lbImg = document.getElementById("frame-lightbox-img");
     const lbPlaceholder = document.getElementById("frame-lightbox-placeholder");
@@ -398,6 +449,9 @@
     const lbSave = document.getElementById("frame-lightbox-save");
     const lbSaveStatus = document.getElementById("frame-lightbox-save-status");
     const lbFullEdit = document.getElementById("frame-lightbox-full-edit");
+    const lbSetFrameOne = document.getElementById("frame-lightbox-set-frame-one");
+    const frameOneSelect = document.getElementById("frame-one-source");
+    const setFrameOneForm = document.getElementById("set-frame-one-form");
     const lbClose = lightbox.querySelector(".frame-lightbox__close");
     const lbPrev = document.getElementById("frame-lightbox-prev");
     const lbNext = document.getElementById("frame-lightbox-next");
@@ -580,6 +634,18 @@
         data.frameLabel,
         cell.classList.contains("is-favorite")
       );
+
+      if (lbSetFrameOne) {
+        lbSetFrameOne.hidden = !data.imageUrl;
+      }
+    }
+
+    if (lbSetFrameOne && frameOneSelect && setFrameOneForm) {
+      lbSetFrameOne.addEventListener("click", () => {
+        const data = frameDataFromCell(frameCells[lightboxIndex]);
+        frameOneSelect.value = data.frameNumber;
+        setFrameOneForm.requestSubmit();
+      });
     }
 
     function openLightboxForCell(cell) {

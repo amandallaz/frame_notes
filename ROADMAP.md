@@ -18,6 +18,7 @@ Living plan for what’s shipped, what’s next, and what’s later.
 - Rolls index (`/projects/rolls/`) with preview strip; rolls keep `owner` when project is deleted
 - Header nav: **Projects** | **Rolls** (account menu for logout / delete only)
 - Delete roll confirmation
+- Required `Project.owner` and `FilmRoll.owner` (migration `0011_require_owner` with backfill)
 
 ### Workflow testing (localhost) — passed
 
@@ -41,17 +42,11 @@ Full photographer flow verified on localhost:
 
 ## Next
 
-### Data / auth hardening
-
-- Backfill `Project.owner` for any legacy null rows
-- Migration to require `Project.owner` (`null=False`)
-- Same for `FilmRoll.owner` if desired
-
 ### Image storage
 
-- Configure Cloudinary image storage
-- Move scan uploads from local `media/` to cloud storage
-- Verify upload, display, and deletion workflows
+- ~~Configure Cloudinary (`.env` + django-cloudinary-storage)~~ — done
+- Verify upload, display, and deletion workflows on ngrok / production
+- Optional: `python manage.py upload_local_scans` for legacy `media/` files
 
 ### External testing
 
