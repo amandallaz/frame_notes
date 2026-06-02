@@ -2,12 +2,9 @@
 
 Frame Notes is a workflow tool for film photographers. It helps organize projects, track rolls, capture frame level notes, and review scans from contact sheet to final print.
 
-**Status:** Active development. Core roll tracking, frame notes, scan import, contact sheet review, and user accounts are functional. Production deployment is not yet configured.
+**Status:** Active development. Core roll tracking, frame notes, scan import, contact sheet review, and user accounts are functional. 
 
 ![Contact sheet view](docs/contact-sheet.png)
-
-![Project detail — add a roll](docs/project-detail.png)
-
 ---
 
 ## Features
@@ -28,17 +25,15 @@ Frame Notes is a workflow tool for film photographers. It helps organize project
 - Projects, film rolls, and frame notes
 - Lab scan import from roll page
 - Contact sheet review with lightbox
-- Favorites and in-lightbox note editing (AJAX)
+- Favorites and frame note editing from the lightbox view 
 
 ---
 
 ## Data model
 
-Django’s built-in **User** owns **Project** records. **FilmRoll** is the main physical-roll record and can belong to zero or more projects (many-to-many). Each roll has **FrameNote** rows for edge numbers, text notes, scan images, and favorites.
+Django’s built-in **User** owns **Project** records. **FilmRoll** represents a physical roll of film and may be associated with multiple projects. Each roll contains **FrameNote** records for edge numbers, notes, scan images, and favorites.
 
 ![Data model — User, Project, FilmRoll, and FrameNote](docs/data-model.png)
-
-Deleting a user removes their projects (CASCADE). Rolls that were only linked via M2M may remain in the database until removed explicitly.
 
 ---
 
@@ -80,3 +75,9 @@ Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/) — use **Sign up** or **L
 Scans are stored in `media/` (gitignored). After cloning, create an account and add projects from the app, or assign `Project.owner` in the shell for any existing rows from before accounts were added.
 
 Import images from the **Import folder** panel on any roll.
+
+---
+
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for details.
