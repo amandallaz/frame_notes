@@ -55,9 +55,104 @@
     max-width: var(--max-width);
     margin: 0 auto;
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: 1rem;
+  }
+  .site-header__nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem 1.25rem;
+  }
+  .site-auth {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+  }
+  .site-account {
+    position: relative;
+  }
+  .site-account__trigger {
+    list-style: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  .site-account__trigger::after {
+    content: "▾";
+    margin-left: 0.2rem;
+    font-size: 0.7em;
+    opacity: 0.55;
+  }
+  .site-account[open] .site-account__trigger::after {
+    content: "▴";
+  }
+  .site-account__trigger::-webkit-details-marker {
+    display: none;
+  }
+  .site-account__trigger::marker {
+    content: "";
+  }
+  .site-account[open] .site-account__trigger {
+    color: var(--text);
+  }
+  .site-account__menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.35rem);
+    min-width: 11rem;
+    margin: 0;
+    padding: 0.25rem 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 20px rgba(42, 36, 32, 0.1);
+    z-index: 50;
+  }
+  .site-account__menu form {
+    margin: 0;
+  }
+  .site-account__menu button {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0.5rem 0.85rem;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 400;
+    text-align: left;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .site-account__menu button:hover {
+    background: var(--bg);
+  }
+  .site-account__menu a {
+    display: block;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.85rem;
+    color: var(--danger);
+    border-bottom: none;
+    border-top: 1px solid var(--border);
+  }
+  .site-account__menu a:hover {
+    background: var(--error-bg);
+    color: var(--danger);
+  }
+  .site-auth a {
+    font-size: 0.9rem;
+    color: var(--muted);
+    border-bottom: none;
+  }
+  .site-auth a:hover {
+    color: var(--accent);
   }
   .site-brand {
     font-size: 0.85rem;
@@ -71,6 +166,15 @@
   .site-back {
     font-size: 0.9rem;
     color: var(--muted);
+    border-bottom: none;
+    white-space: nowrap;
+  }
+  .site-back:hover {
+    color: var(--accent);
+  }
+  .site-back ~ .site-auth {
+    padding-left: 1.25rem;
+    border-left: 1px solid var(--border);
   }
   main {
     max-width: var(--max-width);
@@ -458,15 +562,19 @@
     position: relative;
     z-index: 1;
     display: inline-block;
+    margin: 0;
+    padding: 0;
     font-family: ui-monospace, "SF Mono", Menlo, monospace;
     font-size: 0.62rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.06em;
     color: var(--film-number);
-    border-bottom: none;
+    background: none;
+    border: none;
     line-height: 1;
     text-shadow: 0 0 8px rgba(232, 149, 74, 0.35);
+    cursor: pointer;
   }
   .frame-grid__caption:hover {
     color: #f5b066;
@@ -599,68 +707,93 @@
     border-color: var(--accent);
     background: var(--surface);
   }
-  .frame-lightbox {
-    position: relative;
+  .frame-lightbox:not([open]) {
+    display: none;
+  }
+  .frame-lightbox[open] {
+    display: flex;
+    flex-direction: column;
     width: min(96vw, 58rem);
     max-height: 94vh;
+    margin: auto;
     padding: 0;
-    border: 1px solid var(--filmstrip-line);
-    border-radius: 4px;
-    background: var(--filmstrip-bg);
-    color: var(--filmstrip-text);
-    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 16px 48px rgba(42, 36, 32, 0.18);
+    overflow-x: hidden;
+    overflow-y: auto;
   }
   .frame-lightbox::backdrop {
-    background: rgba(34, 31, 28, 0.82);
+    background: rgba(42, 36, 32, 0.35);
   }
   .frame-lightbox__close {
     position: absolute;
     top: 0.5rem;
     right: 0.5rem;
-    z-index: 2;
+    z-index: 5;
     width: 2rem;
     height: 2rem;
     padding: 0;
     font-size: 1.25rem;
     line-height: 1;
-    border-radius: 3px;
-    color: var(--filmstrip-text);
-    background: rgba(30, 27, 24, 0.92);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius);
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
     cursor: pointer;
   }
   .frame-lightbox__close:hover {
-    color: var(--filmstrip-pick);
-    border-color: rgba(201, 149, 106, 0.45);
+    color: var(--text);
+    border-color: var(--accent);
+    background: var(--bg);
   }
   .frame-lightbox__stage {
     position: relative;
-    background: var(--film-well);
+    flex: 0 1 auto;
+    min-height: 0;
+    max-height: min(62vh, calc(94vh - 14rem));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    overflow: hidden;
+  }
+  .frame-lightbox__frame-label {
+    position: absolute;
+    bottom: 0.55rem;
+    left: 0.75rem;
+    z-index: 2;
+    margin: 0;
+    padding: 0.2rem 0.5rem;
+    font-family: var(--font);
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text);
+    background: rgba(255, 252, 248, 0.9);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    pointer-events: none;
+  }
+  .frame-lightbox__media {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 8rem;
+    max-height: 100%;
+    margin: 0 2.75rem;
   }
   .frame-lightbox__favorite {
     position: static;
     flex-shrink: 0;
-    width: 2.5rem;
-    height: 2.5rem;
-    padding: 0;
-    font-size: 1.35rem;
-    line-height: 1;
-    border-radius: 3px;
-    color: var(--filmstrip-text);
-    background: rgba(40, 36, 33, 0.95);
-    border: 1px solid var(--filmstrip-line);
-    box-shadow: none;
-    cursor: pointer;
-  }
-  .frame-lightbox__favorite:hover:not(:disabled) {
-    color: var(--filmstrip-pick);
-    border-color: rgba(208, 74, 74, 0.55);
-    background: rgba(50, 45, 42, 0.98);
-  }
-  .frame-lightbox__favorite.is-on {
-    color: var(--filmstrip-pick);
-    border-color: var(--filmstrip-pick);
-    background: rgba(50, 45, 42, 0.98);
+    width: 2.25rem;
+    height: 2.25rem;
+    font-size: 1.2rem;
   }
   .frame-lightbox__favorite:disabled {
     opacity: 0.5;
@@ -669,81 +802,150 @@
   .frame-lightbox__nav {
     position: absolute;
     top: 50%;
-    z-index: 1;
+    z-index: 3;
     transform: translateY(-50%);
     width: 2rem;
     height: 2.25rem;
     padding: 0;
     font-size: 1.35rem;
     line-height: 1;
-    border-radius: 3px;
-    color: var(--filmstrip-text);
-    background: rgba(30, 27, 24, 0.88);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius);
+    color: var(--text);
+    background: rgba(255, 252, 248, 0.92);
+    border: 1px solid var(--border);
     cursor: pointer;
   }
   .frame-lightbox__nav:hover:not(:disabled) {
-    color: var(--filmstrip-pick);
-    border-color: rgba(201, 149, 106, 0.45);
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--surface);
   }
   .frame-lightbox__nav:disabled {
-    opacity: 0.25;
+    opacity: 0.3;
     cursor: default;
   }
   .frame-lightbox__nav--prev { left: 0.5rem; }
   .frame-lightbox__nav--next { right: 0.5rem; }
   .frame-lightbox__img {
     display: block;
-    width: 100%;
-    max-height: 74vh;
+    max-width: 100%;
+    max-height: 100%;
     object-fit: contain;
-    background: var(--film-well);
+    background: var(--bg);
+  }
+  .frame-lightbox__img[hidden],
+  .frame-lightbox__placeholder[hidden] {
+    display: none !important;
+  }
+  .frame-lightbox__placeholder {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--muted);
   }
   .frame-lightbox__caption {
-    padding: 0.7rem 1rem 0.85rem;
-    background: var(--filmstrip-bg);
-    border-top: 1px solid var(--filmstrip-line);
+    flex: 0 0 auto;
+    flex-shrink: 0;
+    padding: 0.75rem 1rem 1rem;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
   }
   .frame-lightbox__heading {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 0.75rem;
   }
-  .frame-lightbox__title {
+  .frame-lightbox__meta {
+    min-width: 0;
+  }
+  .frame-lightbox__counter {
     margin: 0;
-    font-family: var(--font);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
     font-size: 0.72rem;
+    color: var(--muted);
+  }
+  .frame-lightbox__caption .meta {
+    color: var(--muted);
+    font-size: inherit;
+  }
+  .frame-lightbox__scan {
+    margin: 0.2rem 0 0;
+    font-size: 0.8rem;
+    color: var(--muted);
+    word-break: break-all;
+  }
+  .frame-lightbox__note-label {
+    display: block;
+    margin: 0.5rem 0 0.25rem;
+    font-size: 0.62rem;
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--filmstrip-text);
+    color: var(--muted);
   }
-  .frame-lightbox__counter {
-    margin: 0.15rem 0 0;
-    font-family: ui-monospace, "SF Mono", Menlo, monospace;
-    font-size: 0.72rem;
-    color: var(--filmstrip-muted);
+  .frame-lightbox__note-input {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0.5rem 0.55rem;
+    font-family: var(--font);
+    font-size: 0.88rem;
+    line-height: 1.4;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    resize: vertical;
+    min-height: 2.75rem;
+    max-height: 6rem;
+    box-sizing: border-box;
   }
-  .frame-lightbox__caption .meta {
-    color: var(--filmstrip-muted);
-    font-size: inherit;
+  .frame-lightbox__note-input:focus {
+    outline: none;
+    border-color: var(--accent);
   }
-  .frame-lightbox__note,
-  .frame-lightbox__scan {
-    margin: 0.35rem 0 0;
+  .frame-lightbox__note-input::placeholder {
+    color: var(--muted);
+  }
+  .frame-lightbox__edit-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    margin-top: 0.55rem;
+  }
+  .frame-lightbox__save {
+    padding: 0.4rem 0.85rem;
     font-size: 0.85rem;
-    color: var(--filmstrip-muted);
+    font-weight: 600;
+    color: var(--surface);
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
   }
-  .frame-lightbox__edit {
-    display: inline-block;
-    margin-top: 0.65rem;
+  .frame-lightbox__save:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+  .frame-lightbox__save:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+  .frame-lightbox__save-status {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .frame-lightbox__save-status.is-error {
+    color: var(--danger);
+  }
+  .frame-lightbox__full-edit {
+    margin-left: auto;
     font-size: 0.8rem;
-    color: var(--filmstrip-accent);
+    color: var(--muted);
     border-bottom: none;
   }
-  .frame-lightbox__edit:hover {
-    color: var(--filmstrip-pick);
+  .frame-lightbox__full-edit:hover {
+    color: var(--accent);
   }
   .form-hint {
     margin: 0 0 1rem;

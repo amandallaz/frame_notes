@@ -74,8 +74,15 @@
       max-width: min(92vw, 26rem);
       color: rgba(252, 246, 240, 0.88);
     }
-    .landing__cta {
+    .landing__actions {
       margin-top: 2.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem 2rem;
+    }
+    .landing__cta {
       font-size: 0.85rem;
       font-weight: 500;
       letter-spacing: 0.08em;
@@ -87,6 +94,10 @@
     .landing__cta:hover {
       color: rgba(252, 246, 240, 0.98);
       border-bottom-color: rgba(232, 185, 136, 0.95);
+    }
+    .landing__cta--primary {
+      color: rgba(252, 246, 240, 0.95);
+      border-bottom-color: rgba(232, 185, 136, 0.85);
     }
   </style>
 </head>
@@ -102,7 +113,10 @@
     <div class="landing__copy">
       <p class="landing__eyebrow">Frame Notes</p>
       <p class="landing__line">Plan shoots. Track rolls. Shape prints.</p>
-      <a class="landing__cta" href="{% url 'project_list' %}">View projects →</a>
+      <div class="landing__actions">
+        <a class="landing__cta landing__cta--primary" href="{% url 'signup' %}">Sign up</a>
+        <a class="landing__cta" href="{% url 'login' %}">Log in</a>
+      </div>
     </div>
   </main>
 </body>

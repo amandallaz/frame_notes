@@ -1,0 +1,26 @@
+{% extends "studio/base.html" %}
+{% block title %}Delete account — Frame Notes{% endblock %}
+{% block content %}
+  <h1>Delete account</h1>
+  <p class="lead">This permanently deletes your account and all projects you own. This cannot be undone.</p>
+  {% if messages %}
+    <ul class="messages">
+      {% for message in messages %}
+        <li class="{{ message.tags }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  <form method="post">
+    {% csrf_token %}
+    <p>
+      <label>
+        <input type="checkbox" name="confirm" value="yes" required>
+        I understand this is permanent
+      </label>
+    </p>
+    <button type="submit" class="btn--danger">Delete my account</button>
+  </form>
+  <p class="meta" style="margin-top: 1rem;">
+    <a href="{% url 'project_list' %}">Cancel</a>
+  </p>
+{% endblock %}

@@ -1,0 +1,30 @@
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#fffcf8",
+    "primaryTextColor": "#2a2420",
+    "primaryBorderColor": "#b8864a",
+    "lineColor": "#8a7f76",
+    "fontFamily": "system-ui, -apple-system, sans-serif",
+    "fontSize": "16px"
+  },
+  "flowchart": {
+    "curve": "basis",
+    "padding": 32,
+    "nodeSpacing": 55,
+    "rankSpacing": 80
+  }
+}}%%
+flowchart LR
+    User["<b>User</b><br/>username · email"]
+    Project["<b>Project</b><br/>owner → User<br/>title · description"]
+    FilmRoll["<b>FilmRoll</b><br/>label · stock · format<br/>status · max_frames"]
+    FrameNote["<b>FrameNote</b><br/>frame_number · note<br/>scan image · favorite"]
+
+    User -->|owns| Project
+    Project <-->|many-to-many| FilmRoll
+    FilmRoll -->|frames| FrameNote
+
+    classDef entity fill:#fffcf8,stroke:#b8864a,color:#2a2420,stroke-width:2px,rx:8,ry:8
+    class User,Project,FilmRoll,FrameNote entity
+    linkStyle default stroke:#8a7f76,stroke-width:2px

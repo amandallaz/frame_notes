@@ -1,5 +1,7 @@
 from pathlib import Path
 from django.db import models
+from django.conf import settings
+
 
 # function returns photo path string
 def frame_image_upload_to(instance, filename):
@@ -27,6 +29,13 @@ class Project(models.Model):
     is_archived = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="projects",
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         ordering = ["-created_at"]

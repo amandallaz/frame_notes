@@ -7,12 +7,29 @@
   <title>{% block title %}Frame Notes{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'studio/css/site.css' %}">
   {% block extra_css %}{% endblock %}
-</head>
-<body>
   <header class="site-header">
     <div class="site-header__inner">
       <a class="site-brand" href="{% url 'home' %}">Frame Notes</a>
-      {% block back_link %}{% endblock %}
+      <div class="site-header__nav">
+        {% block back_link %}{% endblock %}
+        <nav class="site-auth" aria-label="Account">
+          {% if user.is_authenticated %}
+            <details class="site-account">
+              <summary class="site-account__trigger">{{ user.username }}</summary>
+              <div class="site-account__menu">
+                <form method="post" action="{% url 'logout' %}">
+                  {% csrf_token %}
+                  <button type="submit">Log out</button>
+                </form>
+                <a href="{% url 'delete_account' %}" class="site-account__danger">Delete account</a>
+              </div>
+            </details>
+          {% else %}
+            <a href="{% url 'login' %}">Log in</a>
+            <a href="{% url 'signup' %}">Sign up</a>
+          {% endif %}
+        </nav>
+      </div>
     </div>
   </header>
   <main class="{% block main_class %}{% endblock %}">

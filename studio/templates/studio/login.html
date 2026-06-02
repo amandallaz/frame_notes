@@ -1,0 +1,28 @@
+{% extends "studio/base.html" %}
+{% block title %}Log in — Frame Notes{% endblock %}
+{% block content %}
+  <h1>Log in</h1>
+  <p class="lead">Sign in to your Frame Notes account.</p>
+  {% if messages %}
+    <ul class="messages">
+      {% for message in messages %}
+        <li class="{{ message.tags }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  {% if form.non_field_errors %}
+    <ul class="messages">
+      {% for error in form.non_field_errors %}
+        <li class="error">{{ error }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Log in</button>
+  </form>
+  <p class="meta" style="margin-top: 1rem;">
+    No account? <a href="{% url 'signup' %}">Sign up</a>
+  </p>
+{% endblock %}

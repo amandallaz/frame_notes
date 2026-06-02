@@ -1,0 +1,30 @@
+{% extends "studio/base.html" %}
+{% block title %}Sign up — Frame Notes{% endblock %}
+{% block content %}
+  <h1>Sign up</h1>
+  <p class="lead">Create an account to save projects and rolls.</p>
+  {% if messages %}
+    <ul class="messages">
+      {% for message in messages %}
+        <li class="{{ message.tags }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  {% if form.errors %}
+  <ul class="messages">
+    {% for field, errors in form.errors.items %}
+      {% for error in errors %}
+        <li class="error">{{ field }}: {{ error }}</li>
+      {% endfor %}
+    {% endfor %}
+  </ul>
+    {% endif %}
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Create account</button>
+  </form>
+  <p class="meta" style="margin-top: 1rem;">
+    Already have an account? <a href="{% url 'login' %}">Log in</a>
+  </p>
+{% endblock %}

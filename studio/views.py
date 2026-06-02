@@ -1,20 +1,34 @@
 from django.contrib import messages
+from django.contrib.auth import login
+from django.contrib.auth import logout as auth_logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import LoginView
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from .folder_import import clear_roll_images, import_roll_folder
-from .forms import FilmRollForm, FrameNoteForm, ProjectForm
+from .forms import FilmRollForm, FrameNoteForm, ProjectForm, SignUpForm
 from .models import FilmRoll, FrameNote, Project
 
 
-def _roll_url(project_pk, roll_pk, frame_number=None):
+class StudioLoginView(LoginView):
+    template_name = "studio/login.html"
+    redirect_authenticated_user = True
+
+
+def _roll_url(project_pk, roll_pk, frame_number=None, *, panel=False):
     url = reverse(
         "roll_detail",
         kwargs={"project_pk": project_pk, "roll_pk": roll_pk},
     )
+    params = []
     if frame_number is not None:
-        url = f"{url}?frame={frame_number}"
+        params.append(f"frame={frame_number}")
+    if panel:
+        params.append("panel=1")
+    if params:
+        url = f"{url}?{'&'.join(params)}"
     return url
 
 
@@ -26,18 +40,27 @@ def _get_frame(roll, raw):
     except (FrameNote.DoesNotExist, TypeError, ValueError):
         return None
 
+
+def _user_projects(user):
+    return Project.objects.filter(owner=user, is_archived=False)
+
 def home(request):
+    if request.user.is_authenticated:
+        return redirect("project_list")
     return render(request, "studio/home.html")
 
+@login_required
 def project_list(request):
     if request.method == "POST":
         form = ProjectForm(request.POST)
         if form.is_valid():
-            form.save()
+            project = form.save(commit=False)
+            project.owner = request.user
+            project.save()
             return redirect("project_list")
     else:
         form = ProjectForm()
-    projects = Project.objects.filter(is_archived=False)
+    projects = _user_projects(request.user)
     return render(
         request,
         "studio/project_list.html",
@@ -48,9 +71,9 @@ def project_list(request):
         },
     )
 
-
+@login_required
 def project_detail(request, pk):
-    project = get_object_or_404(Project, pk=pk)
+    project = get_object_or_404(Project, pk=pk, owner=request.user)
     project_form = ProjectForm(instance=project)
     roll_form = FilmRollForm()
     show_edit_project = False
@@ -109,9 +132,9 @@ def project_detail(request, pk):
         },
     )
 
-
+@login_required
 def roll_detail(request, project_pk, roll_pk):
-    project = get_object_or_404(Project, pk=project_pk)
+    project = get_object_or_404(Project, pk=project_pk, owner=request.user)
     roll = get_object_or_404(
         FilmRoll.objects.filter(projects=project),
         pk=roll_pk,
@@ -214,7 +237,7 @@ def roll_detail(request, project_pk, roll_pk):
                             "is_favorite": frame.is_favorite,
                         }
                     )
-            return redirect(_roll_url(project_pk, roll_pk, raw))
+            return redirect(_roll_url(project_pk, roll_pk))
 
         elif action == "delete_frame":
             raw = request.POST.get("frame_number")
@@ -229,7 +252,13 @@ def roll_detail(request, project_pk, roll_pk):
 
         elif action == "save_frame":
             raw = request.POST.get("frame_number")
+            is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
             instance = _get_frame(roll, raw)
+            if is_ajax and instance is None:
+                return JsonResponse(
+                    {"error": "Could not find that frame."},
+                    status=404,
+                )
             form = FrameNoteForm(
                 request.POST, request.FILES, roll=roll, instance=instance
             )
@@ -237,14 +266,41 @@ def roll_detail(request, project_pk, roll_pk):
                 frame = form.save(commit=False)
                 frame.roll = roll
                 frame.save()
-                return redirect(_roll_url(project_pk, roll_pk, frame.frame_number))
+                if is_ajax:
+                    return JsonResponse(
+                        {
+                            "frame_number": frame.frame_number,
+                            "display_number": frame.display_number,
+                            "note": frame.note,
+                        }
+                    )
+                return redirect(
+                    _roll_url(project_pk, roll_pk, frame.frame_number, panel=True)
+                )
+            if is_ajax:
+                return JsonResponse(
+                    {"error": form.errors.get_json_data()},
+                    status=400,
+                )
             show_log_frame = True
 
     else:
         raw = request.GET.get("frame")
-        instance = _get_frame(roll, raw)
+        if (
+            raw
+            and request.GET.get("panel") != "1"
+            and request.GET.get("log") != "1"
+        ):
+            return redirect(_roll_url(project_pk, roll_pk))
+        if request.GET.get("panel") == "1" and raw:
+            instance = _get_frame(roll, raw)
+            show_log_frame = instance is not None
+        elif request.GET.get("log") == "1":
+            instance = None
+            show_log_frame = True
+        else:
+            instance = None
         form = FrameNoteForm(roll=roll, instance=instance)
-        show_log_frame = instance is not None or request.GET.get("log") == "1"
         show_import = request.GET.get("import") == "1"
         show_roll_edit = request.GET.get("edit") == "1"
 
@@ -269,3 +325,33 @@ def roll_detail(request, project_pk, roll_pk):
             "show_roll_edit": show_roll_edit,
         },
     )
+
+def auth_signup(request):
+    if request.user.is_authenticated:
+        return redirect("project_list")
+    if request.method == "POST":
+        form = SignUpForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            messages.success(request, "Welcome! Your account is ready.")
+            return redirect("project_list")
+    else:
+        form = SignUpForm()
+    return render(request, "studio/signup.html", {"form": form})
+
+
+@login_required
+def delete_account(request):
+    if request.method == "POST":
+        if request.POST.get("confirm") != "yes":
+            messages.error(
+                request, "Check the box to confirm account deletion."
+            )
+            return redirect("delete_account")
+        user = request.user
+        auth_logout(request)
+        user.delete()
+        messages.success(request, "Your account has been deleted.")
+        return redirect("home")
+    return render(request, "studio/account_delete.html")

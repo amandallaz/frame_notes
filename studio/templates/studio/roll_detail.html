@@ -26,7 +26,13 @@
       <p class="filmstrip__label">{% if roll.stock %}{{ roll.stock }}{% else %}Contact sheet{% endif %}</p>
       <ul class="frame-grid">
         {% for frame in frames %}
-          <li class="frame-grid__cell{% if frame.is_favorite %} is-favorite{% endif %}{% if editing and form.instance.frame_number == frame.frame_number %} is-active{% endif %}" data-frame-number="{{ frame.frame_number }}">
+          <li
+            class="frame-grid__cell{% if frame.is_favorite %} is-favorite{% endif %}{% if editing and form.instance.frame_number == frame.frame_number %} is-active{% endif %}"
+            data-frame-number="{{ frame.frame_number }}"
+            data-frame-label="{{ frame.display_number }}"
+            {% if frame.image.name %}data-image-url="{{ frame.image.url }}?v={{ roll.updated_at|date:'U' }}"{% endif %}
+            {% if frame.scan_filename %}data-scan="{{ frame.scan_filename }}"{% endif %}
+          >
             <div class="frame-grid__body">
               <div class="frame-grid__edge frame-grid__edge--top" aria-hidden="true"></div>
               <div class="frame-grid__image">
@@ -57,11 +63,11 @@
               >☆</button>
               </div>
               <div class="frame-grid__edge frame-grid__edge--bottom">
-                <a href="?frame={{ frame.frame_number }}" class="frame-grid__caption">{{ frame.display_number }}</a>
+                <button type="button" class="frame-grid__caption frame-grid__open">{{ frame.display_number }}</button>
               </div>
             </div>
+            <template class="frame-grid__note-data">{{ frame.note }}</template>
             {% if frame.note %}
-              <template class="frame-grid__note-data">{{ frame.note }}</template>
               <p class="frame-grid__note">{{ frame.note|truncatechars:32 }}</p>
             {% endif %}
           </li>
@@ -73,16 +79,23 @@
     {% endif %}
   </section>
 
-  <dialog class="frame-lightbox" id="frame-lightbox">
+  <dialog class="frame-lightbox" id="frame-lightbox" closedby="any">
     <button type="button" class="frame-lightbox__close" aria-label="Close">×</button>
     <div class="frame-lightbox__stage">
       <button type="button" class="frame-lightbox__nav frame-lightbox__nav--prev" id="frame-lightbox-prev" aria-label="Previous frame">‹</button>
-      <img class="frame-lightbox__img" id="frame-lightbox-img" src="" alt="">
+      <div class="frame-lightbox__media">
+        <img class="frame-lightbox__img" id="frame-lightbox-img" src="" alt="" hidden>
+        <p class="frame-lightbox__placeholder" id="frame-lightbox-placeholder" hidden>No scan</p>
+      </div>
       <button type="button" class="frame-lightbox__nav frame-lightbox__nav--next" id="frame-lightbox-next" aria-label="Next frame">›</button>
+      <p class="frame-lightbox__frame-label" id="frame-lightbox-title"></p>
     </div>
     <div class="frame-lightbox__caption">
       <div class="frame-lightbox__heading">
-        <p class="frame-lightbox__title" id="frame-lightbox-title"></p>
+        <div class="frame-lightbox__meta">
+          <p class="frame-lightbox__counter meta" id="frame-lightbox-counter"></p>
+          <p class="frame-lightbox__scan" id="frame-lightbox-scan" hidden></p>
+        </div>
         <button
           type="button"
           class="btn-favorite frame-lightbox__favorite"
@@ -90,17 +103,25 @@
           aria-label="Favorite this frame"
         >☆</button>
       </div>
-      <p class="frame-lightbox__counter meta" id="frame-lightbox-counter"></p>
-      <p class="frame-lightbox__note" id="frame-lightbox-note" hidden></p>
-      <p class="frame-lightbox__scan" id="frame-lightbox-scan" hidden></p>
-      <a class="frame-lightbox__edit" id="frame-lightbox-edit" href="#">Edit frame</a>
+      <label class="frame-lightbox__note-label" for="frame-lightbox-note-input">Note</label>
+      <textarea
+        id="frame-lightbox-note-input"
+        class="frame-lightbox__note-input"
+        rows="2"
+        placeholder="f/8 1/250…"
+      ></textarea>
+      <div class="frame-lightbox__edit-actions">
+        <button type="button" class="frame-lightbox__save" id="frame-lightbox-save">Save note</button>
+        <span class="frame-lightbox__save-status" id="frame-lightbox-save-status" hidden></span>
+        <a class="frame-lightbox__full-edit" id="frame-lightbox-full-edit" href="#">Upload image</a>
+      </div>
     </div>
   </dialog>
 
   <div class="roll-tools">
     <details class="create-panel roll-panel"{% if show_log_frame %} open{% endif %}>
       <summary class="create-panel__trigger">
-        {% if editing %}Edit frame {{ form.instance.display_number }}{% else %}Log a frame{% endif %}
+        {% if editing %}Edit frame {{ form.instance.display_number }}{% else %}Add new frame{% endif %}
       </summary>
       <div class="create-panel__body">
         <form method="post" enctype="multipart/form-data">
@@ -274,17 +295,22 @@
 
     const lightbox = document.getElementById("frame-lightbox");
     const lbImg = document.getElementById("frame-lightbox-img");
+    const lbPlaceholder = document.getElementById("frame-lightbox-placeholder");
     const lbTitle = document.getElementById("frame-lightbox-title");
-    const lbNote = document.getElementById("frame-lightbox-note");
+    const lbNoteInput = document.getElementById("frame-lightbox-note-input");
     const lbScan = document.getElementById("frame-lightbox-scan");
-    const lbEdit = document.getElementById("frame-lightbox-edit");
+    const lbSave = document.getElementById("frame-lightbox-save");
+    const lbSaveStatus = document.getElementById("frame-lightbox-save-status");
+    const lbFullEdit = document.getElementById("frame-lightbox-full-edit");
     const lbClose = lightbox.querySelector(".frame-lightbox__close");
     const lbPrev = document.getElementById("frame-lightbox-prev");
     const lbNext = document.getElementById("frame-lightbox-next");
     const lbCounter = document.getElementById("frame-lightbox-counter");
     const lbFavorite = document.getElementById("frame-lightbox-favorite");
     const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value;
-    const zoomButtons = Array.from(document.querySelectorAll(".frame-grid__zoom"));
+    const frameCells = Array.from(
+      document.querySelectorAll(".frame-grid__cell[data-frame-number]")
+    );
     let lightboxIndex = 0;
 
     function gridCellForFrameNumber(frameNumber) {
@@ -327,36 +353,100 @@
       }
     }
 
-    function frameDataFromButton(btn) {
-      const cell = btn.closest(".frame-grid__cell");
+    function frameDataFromCell(cell) {
       const noteData = cell.querySelector(".frame-grid__note-data");
       return {
-        imageUrl: btn.dataset.imageUrl,
-        frameLabel: btn.dataset.frameLabel,
-        frameNumber: btn.dataset.frameNumber,
+        imageUrl: cell.dataset.imageUrl || "",
+        frameLabel: cell.dataset.frameLabel,
+        frameNumber: cell.dataset.frameNumber,
         note: noteData ? noteData.content.textContent.trim() : "",
-        scan: btn.dataset.scan || "",
+        scan: cell.dataset.scan || "",
       };
     }
 
-    function showLightboxAt(index) {
-      if (!zoomButtons.length) return;
-      lightboxIndex = Math.max(0, Math.min(index, zoomButtons.length - 1));
-      const data = frameDataFromButton(zoomButtons[lightboxIndex]);
-
-      lbImg.src = data.imageUrl;
-      lbImg.alt = "Frame " + data.frameLabel;
-      lbTitle.textContent = "Frame " + data.frameLabel;
-      lbEdit.href = "?frame=" + data.frameNumber;
-      lbCounter.textContent = (lightboxIndex + 1) + " of " + zoomButtons.length;
-
-      if (data.note) {
-        lbNote.textContent = data.note;
-        lbNote.hidden = false;
-      } else {
-        lbNote.textContent = "";
-        lbNote.hidden = true;
+    function updateGridNote(cell, note) {
+      const template = cell.querySelector(".frame-grid__note-data");
+      if (template) {
+        template.innerHTML = "";
+        template.content.appendChild(document.createTextNode(note));
       }
+      let noteEl = cell.querySelector(".frame-grid__note");
+      if (note) {
+        if (!noteEl) {
+          noteEl = document.createElement("p");
+          noteEl.className = "frame-grid__note";
+          cell.appendChild(noteEl);
+        }
+        noteEl.textContent =
+          note.length > 32 ? note.slice(0, 32) + "…" : note;
+        noteEl.hidden = false;
+      } else if (noteEl) {
+        noteEl.remove();
+      }
+    }
+
+    function showSaveStatus(message, isError) {
+      lbSaveStatus.textContent = message;
+      lbSaveStatus.hidden = !message;
+      lbSaveStatus.classList.toggle("is-error", Boolean(isError));
+    }
+
+    async function saveLightboxNote() {
+      if (!csrfToken || !frameCells.length) return;
+      const cell = frameCells[lightboxIndex];
+      const data = frameDataFromCell(cell);
+      const note = lbNoteInput.value.trim();
+      lbSave.disabled = true;
+      showSaveStatus("Saving…", false);
+      try {
+        const body = new FormData();
+        body.append("action", "save_frame");
+        body.append("frame_number", data.frameNumber);
+        body.append("note", note);
+        body.append("csrfmiddlewaretoken", csrfToken);
+        const response = await fetch(window.location.pathname, {
+          method: "POST",
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+          body,
+        });
+        if (!response.ok) {
+          showSaveStatus("Could not save", true);
+          return;
+        }
+        const result = await response.json();
+        updateGridNote(cell, result.note);
+        lbNoteInput.value = result.note;
+        showSaveStatus("Saved", false);
+        setTimeout(() => showSaveStatus("", false), 1500);
+      } finally {
+        lbSave.disabled = false;
+      }
+    }
+
+    function showLightboxAt(index) {
+      if (!frameCells.length) return;
+      lightboxIndex = Math.max(0, Math.min(index, frameCells.length - 1));
+      const cell = frameCells[lightboxIndex];
+      const data = frameDataFromCell(cell);
+
+      if (data.imageUrl) {
+        lbImg.src = data.imageUrl;
+        lbImg.alt = "Frame " + data.frameLabel;
+        lbImg.hidden = false;
+        lbPlaceholder.hidden = true;
+      } else {
+        lbImg.removeAttribute("src");
+        lbImg.hidden = true;
+        lbPlaceholder.hidden = false;
+      }
+
+      lbTitle.textContent = "Frame " + data.frameLabel;
+      lbFullEdit.href =
+        "?frame=" + data.frameNumber + "&panel=1";
+      lbCounter.textContent =
+        (lightboxIndex + 1) + " of " + frameCells.length;
+      lbNoteInput.value = data.note;
+      showSaveStatus("", false);
 
       if (data.scan) {
         lbScan.textContent = "Scan: " + data.scan;
@@ -367,40 +457,59 @@
       }
 
       lbPrev.disabled = lightboxIndex === 0;
-      lbNext.disabled = lightboxIndex === zoomButtons.length - 1;
+      lbNext.disabled = lightboxIndex === frameCells.length - 1;
 
-      const cell = zoomButtons[lightboxIndex].closest(".frame-grid__cell");
       setFavoriteUI(
         data.frameNumber,
         data.frameLabel,
-        cell && cell.classList.contains("is-favorite")
+        cell.classList.contains("is-favorite")
       );
     }
 
-    function openLightbox(btn) {
-      const index = zoomButtons.indexOf(btn);
+    function openLightboxForCell(cell) {
+      document.querySelectorAll(".roll-tools details").forEach((panel) => {
+        panel.open = false;
+      });
+      const index = frameCells.indexOf(cell);
       showLightboxAt(index >= 0 ? index : 0);
       lightbox.showModal();
+      lbNoteInput.focus();
     }
 
     document.querySelectorAll(".frame-grid__zoom").forEach((btn) => {
-      btn.addEventListener("click", () => openLightbox(btn));
+      btn.addEventListener("click", () => {
+        openLightboxForCell(btn.closest(".frame-grid__cell"));
+      });
+    });
+
+    document.querySelectorAll(".frame-grid__open").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        openLightboxForCell(btn.closest(".frame-grid__cell"));
+      });
     });
 
     document.querySelectorAll(".frame-grid__favorite").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const cell = btn.closest(".frame-grid__cell");
-        toggleFavorite(cell.dataset.frameNumber, btn.dataset.frameLabel);
+        toggleFavorite(cell.dataset.frameNumber, cell.dataset.frameLabel);
       });
     });
 
     lbPrev.addEventListener("click", () => showLightboxAt(lightboxIndex - 1));
     lbNext.addEventListener("click", () => showLightboxAt(lightboxIndex + 1));
+    lbSave.addEventListener("click", () => saveLightboxNote());
 
     lbFavorite.addEventListener("click", () => {
-      const data = frameDataFromButton(zoomButtons[lightboxIndex]);
+      const data = frameDataFromCell(frameCells[lightboxIndex]);
       toggleFavorite(data.frameNumber, data.frameLabel);
+    });
+
+    lbNoteInput.addEventListener("keydown", (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        saveLightboxNote();
+      }
     });
 
     lightbox.addEventListener("keydown", (e) => {
@@ -414,9 +523,17 @@
       }
     });
 
-    lbClose.addEventListener("click", () => lightbox.close());
+    function closeLightbox() {
+      lightbox.close();
+    }
+
+    lbClose.addEventListener("click", closeLightbox);
     lightbox.addEventListener("click", (e) => {
-      if (e.target === lightbox) lightbox.close();
+      if (e.target === lightbox) closeLightbox();
+    });
+    lightbox.addEventListener("cancel", (e) => {
+      e.preventDefault();
+      closeLightbox();
     });
   </script>
 {% endblock %}
