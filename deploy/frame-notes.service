@@ -8,7 +8,8 @@ Group=www-data
 WorkingDirectory=/var/www/frame_notes
 EnvironmentFile=/var/www/frame_notes/.env
 ExecStart=/var/www/frame_notes/venv/bin/gunicorn \
-    --workers 3 \
+    --workers 1 \
+    --timeout 300 \
     --bind unix:/var/www/frame_notes/run/gunicorn.sock \
     config.wsgi:application
 Restart=on-failure
