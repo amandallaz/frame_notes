@@ -90,6 +90,11 @@ if _script_name:
 else:
     FORCE_SCRIPT_NAME = None
 
+# Folder import can POST many scans at once (nginx must allow it too).
+DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024
+DATA_UPLOAD_MAX_NUMBER_FILES = 150
+
 # Application definition
 
 _cloudinary = cloudinary_credentials()
