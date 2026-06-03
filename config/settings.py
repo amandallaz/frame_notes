@@ -69,8 +69,15 @@ if _ngrok_origin:
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = False
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
+    # Set DJANGO_SECURE_COOKIES=true only after HTTPS works (Secure cookies break login on HTTP).
+    _secure_cookies = os.environ.get("DJANGO_SECURE_COOKIES", "").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    if _secure_cookies:
+        SESSION_COOKIE_SECURE = True
+        CSRF_COOKIE_SECURE = True
 
 # Subpath deploy, e.g. https://amandalaz.com/framenotes/
 _script_name = os.environ.get("DJANGO_SCRIPT_NAME", "").strip()

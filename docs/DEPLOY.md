@@ -32,18 +32,19 @@ cp .env.example .env
 nano .env
 ```
 
-Production minimum (subpath at `/framenotes/`):
+DNS: **A** record `framenotes` → Frame Notes droplet IP.
+
+Production minimum (`https://framenotes.amandalaz.com`):
 
 ```env
 DJANGO_DEBUG=false
 DJANGO_SECRET_KEY=<long random string>
-DJANGO_SCRIPT_NAME=/framenotes
-ALLOWED_HOSTS=amandalaz.com,www.amandalaz.com
-CSRF_TRUSTED_ORIGINS=https://amandalaz.com,https://www.amandalaz.com
+ALLOWED_HOSTS=framenotes.amandalaz.com,67.205.143.130
+CSRF_TRUSTED_ORIGINS=https://framenotes.amandalaz.com
 CLOUDINARY_URL=cloudinary://...
 ```
 
-If `amandalaz.com` DNS points to **another** droplet (main site), add a `location /framenotes/` block there that `proxy_pass`es to this app server — Frame Notes still needs `DJANGO_SCRIPT_NAME=/framenotes` and nginx serving `/framenotes/` on this box.
+Do **not** set `DJANGO_SCRIPT_NAME` (app runs at `/`). Portfolio links to `https://framenotes.amandalaz.com/`.
 
 Generate a secret key on the server:
 
@@ -83,14 +84,14 @@ nginx -t
 systemctl reload nginx
 ```
 
-## 7. HTTPS (when you have a domain)
+## 7. HTTPS
 
 ```bash
 apt install -y certbot python3-certbot-nginx
-certbot --nginx -d your-domain.com
+certbot --nginx -d framenotes.amandalaz.com
 ```
 
-Update `.env`: `CSRF_TRUSTED_ORIGINS=https://your-domain.com`
+Then in `.env`: `CSRF_TRUSTED_ORIGINS=https://framenotes.amandalaz.com` and `DJANGO_SECURE_COOKIES=true`, then `systemctl restart frame-notes`.
 
 ## Updates
 
