@@ -72,6 +72,16 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
+# Subpath deploy, e.g. https://amandalaz.com/framenotes/
+_script_name = os.environ.get("DJANGO_SCRIPT_NAME", "").strip()
+if _script_name:
+    if not _script_name.startswith("/"):
+        _script_name = "/" + _script_name
+    FORCE_SCRIPT_NAME = _script_name.rstrip("/")
+    SESSION_COOKIE_PATH = FORCE_SCRIPT_NAME
+    CSRF_COOKIE_PATH = FORCE_SCRIPT_NAME
+else:
+    FORCE_SCRIPT_NAME = None
 
 # Application definition
 
@@ -166,9 +176,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = "static/"
+_URL_PREFIX = FORCE_SCRIPT_NAME or ""
+STATIC_URL = f"{_URL_PREFIX}/static/" if _URL_PREFIX else "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-MEDIA_URL = "media/"
+MEDIA_URL = f"{_URL_PREFIX}/media/" if _URL_PREFIX else "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 if USE_CLOUDINARY_STORAGE:

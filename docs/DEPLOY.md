@@ -32,15 +32,18 @@ cp .env.example .env
 nano .env
 ```
 
-Production minimum:
+Production minimum (subpath at `/framenotes/`):
 
 ```env
 DJANGO_DEBUG=false
 DJANGO_SECRET_KEY=<long random string>
-ALLOWED_HOSTS=67.205.143.130
-CSRF_TRUSTED_ORIGINS=http://67.205.143.130
+DJANGO_SCRIPT_NAME=/framenotes
+ALLOWED_HOSTS=amandalaz.com,www.amandalaz.com
+CSRF_TRUSTED_ORIGINS=https://amandalaz.com,https://www.amandalaz.com
 CLOUDINARY_URL=cloudinary://...
 ```
+
+If `amandalaz.com` DNS points to **another** droplet (main site), add a `location /framenotes/` block there that `proxy_pass`es to this app server — Frame Notes still needs `DJANGO_SCRIPT_NAME=/framenotes` and nginx serving `/framenotes/` on this box.
 
 Generate a secret key on the server:
 
