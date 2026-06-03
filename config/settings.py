@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 from config.cloudinary_settings import cloudinary_credentials
@@ -27,10 +28,18 @@ load_dotenv(BASE_DIR / ".env")
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-4_^4$c9r0hdtj#@q$8r*c^0+79_%&!b4xe)8tgm_s&ldalrvn8"
+_INSECURE_DEV_SECRET_KEY = (
+    "django-insecure-4_^4$c9r0hdtj#@q$8r*c^0+79_%&!b4xe)8tgm_s&ldalrvn8"
+)
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", _INSECURE_DEV_SECRET_KEY)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() in ("1", "true", "yes")
+
+if not DEBUG and SECRET_KEY == _INSECURE_DEV_SECRET_KEY:
+    raise ImproperlyConfigured(
+        "Set DJANGO_SECRET_KEY in the environment when DJANGO_DEBUG is false."
+    )
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".localhost"]
 if DEBUG:
@@ -56,6 +65,12 @@ if _trusted:
 _ngrok_origin = os.environ.get("NGROK_ORIGIN", "").strip()
 if _ngrok_origin:
     CSRF_TRUSTED_ORIGINS.append(_ngrok_origin)
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 
 # Application definition
@@ -152,6 +167,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
