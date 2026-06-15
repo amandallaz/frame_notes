@@ -37,7 +37,7 @@ DNS: **A** record `framenotes` → Frame Notes droplet IP.
 Production minimum (`https://framenotes.amandalaz.com`):
 
 ```env
-DJANGO_DEBUG=false
+ENVIRONMENT=production
 DJANGO_SECRET_KEY=<long random string>
 ALLOWED_HOSTS=framenotes.amandalaz.com,67.205.143.130
 CSRF_TRUSTED_ORIGINS=https://framenotes.amandalaz.com

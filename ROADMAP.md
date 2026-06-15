@@ -20,6 +20,9 @@ Living plan for what’s shipped, what’s next, and what’s later.
 - Delete roll confirmation
 - Required `Project.owner` and `FilmRoll.owner` (migration `0011_require_owner` with backfill)
 - ngrok dev tunnel support (`ALLOWED_HOSTS`, `NGROK_ORIGIN` for CSRF) — see README
+- Production deploy at **https://framenotes.amandalaz.com** (DigitalOcean, nginx, Gunicorn, HTTPS)
+- Cloudinary for scans in production
+- Deploy docs (`docs/DEPLOY.md`) and server config templates (`deploy/`)
 
 ### Workflow testing (localhost) — passed
 
@@ -51,9 +54,10 @@ Full photographer flow verified on localhost:
 
 ### External testing
 
-- ~~Test application through ngrok~~ — basic mobile access verified
-- Verify image uploads through Cloudinary (on ngrok / production)
-- Test on desktop and mobile browsers (broader flows: import, delete, account)
+- ~~Test application through ngrok~~ — done
+- ~~Deploy to production (framenotes.amandalaz.com)~~ — done
+- Verify image uploads through Cloudinary on production — in progress
+- Test on desktop and mobile browsers (import, delete, account)
 - Test account creation and authentication outside localhost
 
 ### User testing
@@ -67,12 +71,9 @@ Full photographer flow verified on localhost:
 
 ## Production deployment
 
-**After** image storage and external testing are solid.
-
-- Review Django security settings
-- Configure environment variables and secrets
-- Configure production media and static file settings
-- Deploy to DigitalOcean
+- ~~Deploy to DigitalOcean~~ — live at framenotes.amandalaz.com
+- ~~HTTPS (Let's Encrypt)~~ — done
+- Review Django security settings — ongoing
 - Verify backups and recovery process
 
 ---
@@ -101,4 +102,4 @@ Full photographer flow verified on localhost:
 
 ## Notes
 
-Current focus: finish Cloudinary checks on ngrok, then deploy and invite real users. ngrok is for dev testing only (Mac must stay on).
+Current focus: production hardening, real-world testing on framenotes.amandalaz.com, then mobile UX and user invites. ngrok is for dev testing only (Mac must stay on).

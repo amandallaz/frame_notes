@@ -2,7 +2,9 @@
 
 Frame Notes is a workflow tool for film photographers. It helps organize projects, track rolls, capture frame level notes, and review scans from contact sheet to final print.
 
-**Status:** Active development. Core roll tracking, frame notes, scan import, contact sheet review, and user accounts are functional. 
+**Status:** Active development. Core roll tracking, frame notes, scan import, contact sheet review, and user accounts are functional.
+
+**Production:** [https://framenotes.amandalaz.com](https://framenotes.amandalaz.com)
 
 ![Contact sheet view](docs/contact-sheet.png)
 ---
@@ -39,7 +41,7 @@ Django’s built-in **User** owns **Project** records. **FilmRoll** represents a
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for planned work (next up: external testing, production deploy).
+See [ROADMAP.md](ROADMAP.md) for planned work (next up: mobile polish, user testing).
 
 ---
 
@@ -69,6 +71,16 @@ Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/) — use **Sign up** or **L
 Copy `.env.example` to `.env` and add **Cloudinary** credentials for cloud scans; without them, files go to `media/` (gitignored).
 
 After cloning, create an account and add projects from the app. Import images from the **Import folder** panel on any roll.
+
+---
+
+## Production
+
+Deployed on a DigitalOcean droplet with nginx, Gunicorn, SQLite, and Cloudinary for scans.
+
+Server setup: [docs/DEPLOY.md](docs/DEPLOY.md)
+
+For phone testing while developing on your Mac, see **Test on your phone (ngrok)** below.
 
 ---
 

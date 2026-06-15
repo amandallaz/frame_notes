@@ -33,12 +33,15 @@ _INSECURE_DEV_SECRET_KEY = (
 )
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", _INSECURE_DEV_SECRET_KEY)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() in ("1", "true", "yes")
+# ENVIRONMENT=production on the server; development (default) on your Mac.
+_IS_PRODUCTION = (
+    os.environ.get("ENVIRONMENT", "development").strip().lower() == "production"
+)
+DEBUG = not _IS_PRODUCTION
 
-if not DEBUG and SECRET_KEY == _INSECURE_DEV_SECRET_KEY:
+if _IS_PRODUCTION and SECRET_KEY == _INSECURE_DEV_SECRET_KEY:
     raise ImproperlyConfigured(
-        "Set DJANGO_SECRET_KEY in the environment when DJANGO_DEBUG is false."
+        "Set DJANGO_SECRET_KEY in .env when ENVIRONMENT=production."
     )
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".localhost"]
